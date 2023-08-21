@@ -19,5 +19,5 @@ pub fn (mut app App) route_app_get_week() vweb.Result {
 
 ['/api/get-week/:date'; get]
 pub fn (mut app App) route_app_get_week_date(date string) vweb.Result {
-	return app.server_error(501)
+	return app.error_response(501)
 }
