@@ -1,21 +1,14 @@
 module main
 
-import vweb
-import lambdas
 import time
-
-struct GetStarsResponse {
-	count int
-	max   int
-}
+import vweb
 
 ['/api/get-stars'; get]
 pub fn (mut app App) route_api_get_stars() vweb.Result {
-	if res := lambdas.get_stars() {
-		return app.json(res)
-	} else {
-		return app.handle(err)
-	}
+	return app.json({
+		'count': 2
+		'max':   150
+	})
 }
 
 ['/api/get-week'; get]
@@ -26,9 +19,5 @@ pub fn (mut app App) route_app_get_week() vweb.Result {
 
 ['/api/get-week/:date'; get]
 pub fn (mut app App) route_app_get_week_date(date string) vweb.Result {
-	if res := lambdas.get_week(date) {
-		return app.json(res)
-	} else {
-		return app.handle(err)
-	}
+	return app.server_error(501)
 }
