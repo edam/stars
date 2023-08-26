@@ -2,12 +2,19 @@ module main
 
 import time
 import vweb
+import util
 
-['/api/get-stars'; get]
+const prize_id = 1
+
+['/api/cur-prize'; get]
 pub fn (mut app App) route_api_get_stars() vweb.Result {
+	prize := app.db.get_cur_prize() or { return app.error_result(500) }
+	count := app.db.get_cur_star_count() or { return app.error_result(500) }
 	return app.json({
-		'count': 2
-		'max':   150
+		'prize_id': int(prize.id)
+		'count':    count
+		'pot':      count * prize.starval
+		'goal':     prize.goal
 	})
 }
 
@@ -19,5 +26,8 @@ pub fn (mut app App) route_app_get_week() vweb.Result {
 
 ['/api/get-week/:date'; get]
 pub fn (mut app App) route_app_get_week_date(date string) vweb.Result {
-	return app.error_response(501)
+	// date := util.start_of_week(date)
+	sow := util.sdate_week_start(date) or { return app.error_result(500) }
+	println(sow)
+	return app.error_result(501)
 }
