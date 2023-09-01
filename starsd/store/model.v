@@ -42,3 +42,10 @@ fn (mut s StoreImpl) get_cur_star_count() !int {
 	}!
 	return count
 }
+
+fn (mut s StoreImpl) get_stars(prize_id u64, from string, till string) ![]Star {
+    stars := sql s.db {
+        select from Star where prize_id == prize_id && at >= from && at <= till order by at
+    }!
+    return stars
+}

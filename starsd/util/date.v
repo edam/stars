@@ -31,7 +31,7 @@ const (
 	cadj = [4, 2, 0, 6, 4, 2, 0] // century adjust (1700-2399)
 )
 
-// convert date to day of week (1-7)
+// calc day of week from date
 pub fn date_to_dow(y int, m int, d int) !int {
 	if y < 1100 || y > 2399 || m < 1 || m > 12 || d < 1 || d > month_days(y, m)! {
 		return error('bad date')
@@ -56,14 +56,32 @@ fn date_sub(y int, m int, d int, days int) !(int, int, int) {
 	return yy, mm, dd
 }
 
+// add small number of days to a date
+fn date_add(y int, m int, d int, days int) !(int, int, int) {
+	md := month_days(y, m)!
+	if d + days <= md {
+		return y, m, d + days
+	}
+	yy := if m == 12 { y + 1 } else { y }
+	mm := if m == 12 { 1 } else { m + 1 }
+	dd := d + days - md
+	return yy, mm, dd
+}
+
 // get date at start of week
 pub fn week_start(y int, m int, d int) !(int, int, int) {
 	dow := date_to_dow(y, m, d)!
 	return date_sub(y, m, d, dow - 1)!
 }
 
-// sdates
+// YYYY-MM-DD string dates (sdates)
 
+// make an sdate
+pub fn sdate(y int, m int, d int) string {
+	return '${y:04}-${m:02}-${d:02}'
+}
+
+// convert sdate to y, m, d
 pub fn parse_sdate(date string) !(int, int, int) {
 	mut re := regex.regex_opt(r'^([0-9]{4})-([0-9]{2})-([0-9]{2})$') or { panic(err) }
 	if !re.matches_string(date) {
@@ -75,7 +93,7 @@ pub fn parse_sdate(date string) !(int, int, int) {
 	return y, m, d
 }
 
-// convert string date (YYY-MM-DD) to day of week (1-7)
+// calc day of week (1-7) from sdate
 pub fn sdate_to_dow(date string) !int {
 	y, m, d := parse_sdate(date)!
 	return date_to_dow(y, m, d)!
@@ -85,5 +103,12 @@ pub fn sdate_to_dow(date string) !int {
 pub fn sdate_week_start(date string) !string {
 	y, m, d := parse_sdate(date)!
 	yy, mm, dd := week_start(y, m, d)!
-	return '${yy:04}-${mm:02}-${dd:02}'
+	return sdate(yy, mm, dd)
+}
+
+// add a few days to an sdate
+pub fn sdate_add(date string, days int) !string {
+	y, m, d := parse_sdate(date)!
+	yy, mm, dd := date_add(y, m, d, days)!
+	return sdate(yy, mm, dd)
 }
