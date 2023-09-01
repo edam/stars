@@ -1,4 +1,6 @@
 *~
 .DS_Store
 #*
-src/src
+starsd/starsd
+webapp/node_modules
+
