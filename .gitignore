@@ -2,4 +2,5 @@
 .DS_Store
 #*
 starsd/starsd
+webapp/node_modules
 test.db
