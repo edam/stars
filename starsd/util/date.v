@@ -1,6 +1,7 @@
 module util
 
 import regex
+import time
 
 // references
 // https://artofmemory.com/blog/how-to-calculate-the-day-of-the-week/
@@ -23,7 +24,7 @@ pub fn month_days(y int, m int) !int {
 	if m < 1 || m > 12 {
 		return error('bad month')
 	}
-	return if m == 2 && is_leap_year(y) { 29 } else { util.dim[m] }
+	return if m == 2 && is_leap_year(y) { 29 } else { util.dim[m - 1] }
 }
 
 const (
@@ -36,7 +37,6 @@ pub fn date_to_dow(y int, m int, d int) !int {
 	if y < 1100 || y > 2399 || m < 1 || m > 12 || d < 1 || d > month_days(y, m)! {
 		return error('bad date')
 	}
-	println('${y} ${m} ${d}')
 	yl, yh := y % 100, y / 100
 	yc := (yl + (yl / 4)) % 7
 	mc := util.madj[m - 1]
@@ -91,6 +91,11 @@ pub fn parse_sdate(date string) !(int, int, int) {
 	m := re.get_group_by_id(date, 1).int()
 	d := re.get_group_by_id(date, 2).int()
 	return y, m, d
+}
+
+// today's date
+pub fn sdate_now() string {
+	return time.now().get_fmt_date_str(.hyphen, .yyyymmdd)
 }
 
 // calc day of week (1-7) from sdate
