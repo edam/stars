@@ -3,4 +3,6 @@
 #*
 starsd/starsd
 webapp/node_modules
+webapp/.next
 test.db
+
