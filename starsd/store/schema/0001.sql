@@ -2,7 +2,7 @@
 -- prizes
 CREATE TABLE prizes (
   id INTEGER PRIMARY KEY ASC NOT NULL,
-  starval INT NOT NULL,
+  star_val INT NOT NULL,
   goal INT NOT NULL,
   start STRING,
   end STRING
@@ -22,13 +22,22 @@ CREATE TABLE wins (
   id INTEGER PRIMARY KEY ASC NOT NULL,
   at STRING NOT NULL,
   typ INT NOT NULL,
-  prize_id INTEGER NOT NULL
-  got BOOL,
+  prize_id INTEGER NOT NULL,
+  got BOOL
+);
+
+-- deposits
+CREATE TABLE deposits (
+  id INTEGER PRIMARY KEY ASC NOT NULL,
+  at STRING NOT NULL,
+  amount INT NOT NULL,
+  prize_id INTEGER NOT NULL,
+  description STRING NOT NULL
 );
 
 --
 
-INSERT INTO prizes VALUES (1, 2, 300, '2023-08-18', NULL);
+INSERT INTO prizes VALUES (1, 200, 30000, '2023-08-18', NULL);
 
 INSERT INTO stars VALUES (NULL, '2023-08-19', 0, 1, true);
 INSERT INTO stars VALUES (NULL, '2023-08-20', 0, 1, false);
@@ -52,7 +61,7 @@ INSERT INTO stars VALUES (NULL, '2023-09-07', 0, 1, true);
 INSERT INTO stars VALUES (NULL, '2023-09-08', 0, 1, true);
 INSERT INTO stars VALUES (NULL, '2023-09-08', 1, 1, false);
 INSERT INTO wins VALUES (NULL, '2023-09-08', 0, 1, false);
--- 2023-09-05 added £14
+INSERT INTO deposits VALUES (NULL, '2023-09-05', 2000, 1, 'Painted fence');
 
 INSERT INTO stars VALUES (NULL, '2023-09-09', 0, 1, true);
 INSERT INTO stars VALUES (NULL, '2023-09-10', 0, 1, false);
