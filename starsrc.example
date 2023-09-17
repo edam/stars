@@ -1,0 +1,11 @@
+# This is an example ~/.starsrc config file for use with the stars CLI and
+# starsd service.  All values are commented out and set at their defaults.  For
+# more info, please visit http://github.com/edam/stars.
+
+[server]
+#host = "localhost"
+#port = 8070
+
+[client]
+#username = ''
+#password = ''

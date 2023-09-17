@@ -64,14 +64,14 @@ fn (mut a Args) load_conf() ! {
 	file := os.expand_tilde_to_home(a.conf)
 	if os.is_file(file) {
 		conf := toml.parse_file(file) or { return error('error parsing ${file}\n${err}') }
-		if val := conf.value_opt('port') {
+		if val := conf.value_opt('server.port') {
 			if val.int() > 1024 {
 				a.port = val.int()
 			} else {
 				return error('port must be > 1024')
 			}
 		}
-		if val := conf.value_opt('host') {
+		if val := conf.value_opt('server.host') {
 			a.host = val.string()
 		}
 		if val := conf.value_opt('client.username') {
