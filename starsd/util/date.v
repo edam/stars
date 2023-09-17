@@ -74,7 +74,7 @@ pub fn week_start(y int, m int, d int) !(int, int, int) {
 	return date_sub(y, m, d, dow - 1)!
 }
 
-// YYYY-MM-DD string dates (sdates)
+// sdates (YYYY-MM-DD string dates)
 
 // make an sdate
 pub fn sdate(y int, m int, d int) string {
@@ -115,5 +115,12 @@ pub fn sdate_week_start(date string) !string {
 pub fn sdate_add(date string, days int) !string {
 	y, m, d := parse_sdate(date)!
 	yy, mm, dd := date_add(y, m, d, days)!
+	return sdate(yy, mm, dd)
+}
+
+// add a few days to an sdate
+pub fn sdate_sub(date string, days int) !string {
+	y, m, d := parse_sdate(date)!
+	yy, mm, dd := date_sub(y, m, d, days)!
 	return sdate(yy, mm, dd)
 }

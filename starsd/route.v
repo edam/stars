@@ -1,64 +1,71 @@
 module main
 
-import time
 import vweb
 import util
+import api
+import rand
+import crypto.sha256
 
-const prize_id = 1
-
-struct RoutePrizeCur {
-	prize_id u64
-	count    int
-	pot      int
-	goal     int
-}
-
-['/api/prize/cur'; get]
-pub fn (mut app App) route_prize_cur() vweb.Result {
-	prize := app.db.get_cur_prize() or { return app.error_result(500) }
-	count := app.db.get_cur_star_count() or { return app.error_result(500) }
-	return app.json(RoutePrizeCur{
-		prize_id: prize.id
-		count: count
-		pot: count * prize.starval
-		goal: prize.goal
+['/api/auth/:username'; get]
+pub fn (mut app App) route_auth(username string) !vweb.Result {
+	challenge := rand.uuid_v4()
+	if user := app.db.get_user(username) {
+		session_id := sha256.hexhash('${user.psk}:${challenge}')
+		app.sessions.add(session_id, user.id, user.perms)!
+	}
+	return app.json(api.ApiAuth{
+		challenge: challenge
 	})
 }
 
-['/api/week/cur'; get]
-pub fn (mut app App) route_week_cur() vweb.Result {
-	prize := app.db.get_cur_prize() or { return app.error_result(500) }
-	date := time.now().get_fmt_date_str(.hyphen, .yyyymmdd)
-	return app.route_week_prize_date(prize.id, date)
-}
-
-struct RouteWeekStar {
-	at  string
-	got bool
-}
-
-struct RouteWeek {
-	stars []RouteWeekStar
-	from  string
-	till  string
-}
-
-['/api/week/:prize_id/:date'; get]
-pub fn (mut app App) route_week_prize_date(prize_id u64, date string) vweb.Result {
-	sow := util.sdate_week_start(date) or { return app.error_result(500) }
-	from := util.sdate_add(sow, 4) or { '' }
-	till := util.sdate_add(from, 6) or { '' }
-	stars := app.db.get_stars(prize_id, from, till) or { return app.error_result(500) }
-	mut sstars := []RouteWeekStar{}
-	for star in stars {
-		sstars << RouteWeekStar{
-			at: star.at
-			got: star.got
+[middleware: check_auth]
+['/api/prize/cur'; get]
+pub fn (mut app App) route_prize_cur() !vweb.Result {
+	prize := app.db.get_cur_prize()!
+	count := app.db.get_cur_star_count()!
+	deposits := app.db.get_cur_deposits()!
+	return app.json(api.ApiPrizeCur{
+		prize_id: prize.id
+		start: prize.start or { '' }
+		stars: count
+		goal: prize.goal
+		got: struct {
+			stars: count * prize.star_val
+			deposits: deposits
 		}
-	}
-	return app.json(RouteWeek{
+	})
+}
+
+[middleware: check_auth]
+['/api/week/cur'; get]
+pub fn (mut app App) route_week_cur() !vweb.Result {
+	prize := app.db.get_cur_prize()!
+	date := util.sdate_now()
+	return app.route_week_prize_date(prize.id, date)!
+}
+
+[middleware: check_auth]
+['/api/week/last'; get]
+pub fn (mut app App) route_week_last() !vweb.Result {
+	prize := app.db.get_cur_prize()!
+	date := util.sdate_sub(util.sdate_now(), 7)!
+	return app.route_week_prize_date(prize.id, date)!
+}
+
+[middleware: check_auth]
+['/api/week/:prize_id/:date'; get]
+pub fn (mut app App) route_week_prize_date(prize_id u64, date string) !vweb.Result {
+	sow := util.sdate_week_start(date)!
+	from := util.sdate_sub(sow, 2)!
+	till := util.sdate_add(from, 6)!
+	stars := app.db.get_stars(prize_id, from, till)!
+	return app.json(api.ApiWeek{
 		from: from
 		till: till
-		stars: sstars
+		stars: stars.map(api.ApiWeek_Star{
+			at: it.at
+			got: it.got
+			typ: it.typ
+		})
 	})
 }

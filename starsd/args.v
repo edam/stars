@@ -1,32 +1,56 @@
 import edam.ggetopt
 
+const (
+	default_conf        = '~/.starsrc'
+	default_port        = 8070
+	default_session_ttl = 60
+)
+
 [heap]
 pub struct Args {
 pub mut:
-	port int = 8070
-	db   ?string
+	//	conf   string = default_conf
+	db          ?string
+	create      bool
+	port        int = default_port
+	session_ttl int = default_session_ttl
 }
 
 const options = [
 	ggetopt.text('Usage: ${ggetopt.prog()} [OPTION]...'),
 	ggetopt.text(''),
 	ggetopt.text('Options:'),
+	// ggetopt.opt('conf', 'c').arg('FILE', true)
+	//	.help('configuration file (${default_conf})'),
 	ggetopt.opt('db', none).arg('FILE', true)
 		.help('sqlite database file'),
+	ggetopt.opt('create', none)
+		.help('create database schema'),
 	ggetopt.opt('port', `p`).arg('PORT', true)
-		.help('listening port (8070)'),
+		.help('listening port (${default_port})'),
+	ggetopt.opt('session-ttl', none).arg('S', true)
+		.help('auth sessions TTL (${default_session_ttl})'),
 	ggetopt.opt_help(),
 ]
 
-fn (mut args Args) process_arg(arg string, val ?string) ! {
+fn (mut a Args) process_arg(arg string, val ?string) ! {
 	match arg {
 		'db' {
-			args.db = val
+			a.db = val
+		}
+		'create' {
+			a.create = true
 		}
 		'port', 'p' {
-			args.port = val or { '' }.int()
-			if args.port <= 1024 {
+			a.port = val or { '' }.int()
+			if a.port <= 1024 {
 				return error('--port: port must be > 1024')
+			}
+		}
+		'session-ttl' {
+			a.session_ttl = val or { '' }.int()
+			if a.session_ttl < 1 {
+				return error('--session-ttl: must > 0')
 			}
 		}
 		'help' {

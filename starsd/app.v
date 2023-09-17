@@ -9,13 +9,15 @@ struct App {
 pub:
 	middlewares map[string][]vweb.Middleware
 mut:
-	db &store.Store = unsafe { nil }
+	db       &store.Store = unsafe { nil }
+	sessions &Sessions    [vweb_global] = unsafe { nil }
+	session  ?Session
 }
 
 fn App.new() &App {
 	return &App{
 		middlewares: {
-			'/api/': [middleware_auth]
+			'/api/': []
 		}
 	}
 }
@@ -28,16 +30,30 @@ pub fn (mut app App) run() {
 		app.db.close() or { die('db: ${err}') }
 	}
 
+	if args.create {
+		app.db.create() or { die('db: ${err}') }
+	}
 	app.db.update() or { die('db: ${err}') }
+
+	app.sessions = Sessions.new(args.session_ttl) or { die('sessions init fail') }
 
 	vweb.run_at(app, vweb.RunParams{
 		port: args.port
 	}) or { panic(err) }
 }
 
-pub fn middleware_auth(mut ctx vweb.Context) bool {
-	// app.redirect( '/login' )
-	return true
+fn (mut app App) check_auth() bool {
+	if session_id := app.req.cookies['session'] {
+		if session := app.sessions.get(session_id) {
+			app.session = session
+		}
+	}
+	if app.session == none {
+		app.error_result(403)
+		return false
+	} else {
+		return true
+	}
 }
 
 pub fn (mut app App) not_found() vweb.Result {
