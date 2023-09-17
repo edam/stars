@@ -35,6 +35,14 @@ CREATE TABLE deposits (
   description STRING NOT NULL
 );
 
+-- users
+CREATE TABLE users {
+  id INTEGER PRIMARY KEY ASC NOT NULL,
+  name STRING NOT NULL,
+  psk STRING NOT NULL,
+  perms INTEGER NOT NULL,
+}
+
 --
 
 INSERT INTO prizes VALUES (1, 200, 30000, '2023-08-18', NULL);
@@ -43,6 +51,7 @@ INSERT INTO stars VALUES (NULL, '2023-08-19', 0, 1, true);
 INSERT INTO stars VALUES (NULL, '2023-08-20', 0, 1, false);
 INSERT INTO stars VALUES (NULL, '2023-08-21', 0, 1, true);
 INSERT INTO stars VALUES (NULL, '2023-08-21', 1, 1, false);
+INSERT INTO stars VALUES (NULL, '2023-08-21', 2, 1, false);
 INSERT INTO wins VALUES (NULL, '2023-08-21', 0, 1, true);
 
 INSERT INTO stars VALUES (NULL, '2023-08-26', 0, 1, true);
@@ -50,6 +59,7 @@ INSERT INTO stars VALUES (NULL, '2023-08-27', 0, 1, true);
 INSERT INTO stars VALUES (NULL, '2023-08-28', 0, 1, true);
 INSERT INTO stars VALUES (NULL, '2023-08-29', 0, 1, true);
 INSERT INTO stars VALUES (NULL, '2023-08-29', 1, 1, true);
+INSERT INTO stars VALUES (NULL, '2023-08-29', 2, 1, true);
 INSERT INTO wins VALUES (NULL, '2023-08-29', 0, 1, true);
 
 INSERT INTO stars VALUES (NULL, '2023-09-02', 0, 1, true);
@@ -60,13 +70,17 @@ INSERT INTO stars VALUES (NULL, '2023-09-06', 0, 1, false);
 INSERT INTO stars VALUES (NULL, '2023-09-07', 0, 1, true);
 INSERT INTO stars VALUES (NULL, '2023-09-08', 0, 1, true);
 INSERT INTO stars VALUES (NULL, '2023-09-08', 1, 1, false);
+INSERT INTO stars VALUES (NULL, '2023-09-08', 2, 1, false);
 INSERT INTO wins VALUES (NULL, '2023-09-08', 0, 1, false);
 INSERT INTO deposits VALUES (NULL, '2023-09-05', 2000, 1, 'Painted fence');
 
 INSERT INTO stars VALUES (NULL, '2023-09-09', 0, 1, true);
 INSERT INTO stars VALUES (NULL, '2023-09-10', 0, 1, false);
-INSERT INTO stars VALUES (NULL, '2023-09-13', 0, 1, NULL);
-INSERT INTO stars VALUES (NULL, '2023-09-14', 0, 1, NULL);
+INSERT INTO stars VALUES (NULL, '2023-09-11', 0, 1, true);
+INSERT INTO stars VALUES (NULL, '2023-09-12', 0, 1, true);
+INSERT INTO stars VALUES (NULL, '2023-09-13', 0, 1, true);
+INSERT INTO stars VALUES (NULL, '2023-09-14', 0, 1, true);
 INSERT INTO stars VALUES (NULL, '2023-09-15', 0, 1, NULL);
 INSERT INTO stars VALUES (NULL, '2023-09-15', 1, 1, false);
+INSERT INTO stars VALUES (NULL, '2023-09-15', 2, 1, NULL);
 INSERT INTO wins VALUES (NULL, '2023-09-15', 0, 1, NULL);

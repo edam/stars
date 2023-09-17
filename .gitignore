@@ -2,7 +2,10 @@
 .DS_Store
 #*
 starsd/starsd
+stars/stars
 webapp/node_modules
 webapp/.next
 test.db
-
+GPATH
+GRTAGS
+GTAGS
