@@ -23,8 +23,8 @@ const options = [
 	ggetopt.text('Usage: ${ggetopt.prog()} [OPTION]... COMMAND'),
 	ggetopt.text(''),
 	ggetopt.text('Options:'),
-	// ggetopt.opt('conf', 'c').arg('FILE', true)
-	//	.help('configuration file (${default_conf})'),
+	ggetopt.opt('conf', `c`).arg('FILE', true)
+		.help('configuration file (${default_conf})'),
 	ggetopt.opt('host', `h`).arg('HOST', true)
 		.help('hostname to connect to'),
 	ggetopt.opt('port', `p`).arg('PORT', true)
@@ -36,6 +36,10 @@ fn (mut a Args) pre_process_arg(arg string, val ?string) ! {
 	match arg {
 		'conf', 'c' {
 			a.conf = val or { '' }
+		}
+		'help' {
+			ggetopt.print_help(options)
+			exit(0)
 		}
 		else {}
 	}
@@ -51,10 +55,6 @@ fn (mut a Args) process_arg(arg string, val ?string) ! {
 			if a.port <= 1024 {
 				return error('--port: port must be > 1024')
 			}
-		}
-		'help' {
-			ggetopt.print_help(options)
-			exit(0)
 		}
 		else {}
 	}
