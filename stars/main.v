@@ -1,6 +1,6 @@
 module main
 
-import edam.ggetopt { die }
+import edam.ggetopt { die, prog }
 import cmds
 
 fn main() {
@@ -22,6 +22,18 @@ fn main() {
 		}
 		'admin' {
 			client.admin() or { die(err) }
+		}
+		'deposits' {
+			client.deposits() or { die(err) }
+		}
+		'help' {
+			println('Usage: ${prog()} [COMMAND]')
+			println('')
+			println('Commands:')
+			println('  info      Prize pot and daily stars overview (default)')
+			println("  last      Last week's stars")
+			println('  deposits  Deposit details')
+			println('  admin     Admin menu')
 		}
 		else {
 			die('unknown command')

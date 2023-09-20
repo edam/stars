@@ -1,8 +1,6 @@
 module cmds
 
-import api
 import math
-import time
 
 const (
 	stars_title = '𝔻 𝔸 𝕀 𝕃 𝕐   𝕊 𝕋 𝔸 ℝ 𝕊'
@@ -120,95 +118,6 @@ fn prt[T](args ...T) {
 }
 
 // --
-
-fn draw_title() {
-	prt('')
-	prt(lcr(cmds.faint + '~', fg(.white) + cmds.stars_title, cmds.faint + '~'))
-}
-
-fn draw_grand_prize(res api.ApiPrizeCur) {
-	star_width := cmds.width * res.got.stars / res.goal
-	dep_width := cmds.width * res.got.deposits / res.goal
-	rem_width := cmds.width - star_width - dep_width
-
-	tline := bg(.yellow) + '▔'.repeat(star_width) + bg(.green) + '▔'.repeat(dep_width) +
-		cmds.reset + '▔'.repeat(rem_width) + ' 🏆'
-	bline := '▔'.repeat(cmds.width)
-
-	info1 := ra(['${res.stars} stars', 'deposits'])
-	info2 := ra(['${res.got.stars / 100}', '${res.got.deposits / 100}'])
-	perc := 100.0 * f64(res.got.stars + res.got.deposits) / f64(res.goal)
-
-	prt('')
-	prt(lcr('ɢʀᴀɴᴅ ᴩʀɪᴢᴇ', '', '${perc:.0}%'))
-	prt('${tline}')
-	prt('${bline}')
-
-	start := time.parse('${res.start} 00:00:00') or { time.now() }
-	so_far := time.now() - start
-	est_days := so_far.days() * 100.0 / perc
-	est_end := start.add_days(int(est_days))
-	eta := '${est_end.day} ${cmds.month_names[est_end.month]}'
-
-	prt(lcr(fg(.yellow) + '${info1[0]} = £${info2[0]}' + cmds.reset, '', 'total ' + fg(.white) +
-		'£${(res.got.stars + res.got.deposits) / 100} / £${res.goal / 100}'))
-	prt(lcr(fg(.green) + '${info1[1]} = £${info2[1]}' + cmds.reset, '', 'ETA: ${eta}'))
-}
-
-fn draw_star(star api.ApiWeek_Star, total &int, avail &int) string {
-	if got := star.got {
-		if got {
-			(*total)++
-			return '⭐'
-		} else {
-			return '❌'
-		}
-	} else {
-		(*avail)++
-		return '❔'
-	}
-}
-
-fn draw_weekly_stars(this bool, res api.ApiWeek) {
-	mut regular := 0
-	mut bonus := 0
-	for star in res.stars {
-		if star.typ == 0 {
-			regular++
-		} else {
-			bonus++
-		}
-	}
-
-	week := if this { 'ᴛʜɪꜱ ᴡᴇᴇᴋ' } else { 'ʟᴀꜱᴛ ᴡᴇᴇᴋ' }
-	nweek := math.max(9, 2 + 4 * regular)
-
-	info1 := la([week, '▔'.repeat(nweek)])
-	info2 := la(['ʙᴏɴᴜꜱ', '▔▔▔▔▔▔'])
-
-	mut total := 0
-	mut avail := 0
-	mut sline := '  ' + res.stars.filter(it.typ == 0).map(draw_star(it, &total, &avail)).join('  ')
-	for typ in [1, 2] {
-		bstars := res.stars.filter(it.typ == typ)
-		if bstars.len == 1 {
-			sline += '      ' + draw_star(bstars[0], &total, &avail)
-		}
-	}
-	lost := res.stars.len - total - avail
-
-	from := time.parse('${res.from} 00:00:00') or { panic(err) }
-	till := time.parse('${res.till} 23:59:59') or { panic(err) }
-	when := '${from.day} ${cmds.month_names[from.month]} - ${till.day} ${cmds.month_names[till.month]}'
-	lostinfo := if lost > 0 { 'lost ${res.stars.len - total - avail} :(' } else { '' }
-
-	prt('')
-	prt(info1[0] + '  ${info2[0]}'.repeat(bonus))
-	prt(lcr(info1[1] + '  ${info2[1]}'.repeat(bonus), '', when))
-	prt(lcr(sline, '', fg(.white) + '${total} / ${res.stars.len}' + cmds.reset + ' stars'))
-	prt(lcr('', '', fg(.red) + lostinfo))
-	prt(info1[1] + '  ${info2[1]}'.repeat(bonus))
-}
 
 fn draw_server_line(host string, ms i64) {
 	prt(lcr('', '', cmds.faint + 'from ${host} in ~${ms}ms'))
