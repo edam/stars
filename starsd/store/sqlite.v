@@ -6,7 +6,8 @@ struct SqliteDB {
 	StoreImpl
 }
 
-fn SqliteDB.new(path string) !&SqliteDB {
+// pub fn SqliteD.new(path string) !&SqliteDB {
+pub fn new_sqlite(path string) !&SqliteDB {
 	db := sqlite.connect(path)!
 	return &SqliteDB{
 		db: db

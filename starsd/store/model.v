@@ -94,7 +94,7 @@ fn (mut s StoreImpl) get_cur_prize() !Prize {
 	if s.prize == unsafe { nil } {
 		today := util.sdate_now()
 		prizes := sql s.db {
-			select from Prize where start <= today && end is none
+			select from Prize where start <= today && end is none order by start
 		}!
 		if prizes.len == 0 {
 			return error('no active prizes')
@@ -134,4 +134,17 @@ fn (mut s StoreImpl) get_deposits(prize_id u64) !int {
 		total += deposit.amount
 	}
 	return total
+}
+
+fn (mut s StoreImpl) set_star_got(prize_id u64, date string, typ int, got ?bool) !bool {
+	stars := sql s.db {
+		select from Star where prize_id == prize_id && at == date && typ == typ
+	}!
+	if stars.len != 1 {
+		return false
+	}
+	sql s.db {
+		update Star set got = got where prize_id == prize_id && at == date && typ == typ
+	}!
+	return true
 }

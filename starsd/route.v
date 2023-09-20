@@ -55,8 +55,8 @@ pub fn (mut app App) route_week_last() !vweb.Result {
 [middleware: check_auth]
 ['/api/week/:prize_id/:date'; get]
 pub fn (mut app App) route_week_prize_date(prize_id u64, date string) !vweb.Result {
-	sow := util.sdate_week_start(date)!
-	from := util.sdate_sub(sow, 2)!
+	sow := util.sdate_add(util.sdate_week_start(date)!, app.args.first_dow - 1)!
+	from := if sow > date { util.sdate_sub(sow, 7)! } else { sow }
 	till := util.sdate_add(from, 6)!
 	stars := app.db.get_stars(prize_id, from, till)!
 	return app.json(api.ApiWeek{
@@ -68,4 +68,32 @@ pub fn (mut app App) route_week_prize_date(prize_id u64, date string) !vweb.Resu
 			typ: it.typ
 		})
 	})
+}
+
+[middleware: check_auth_admin]
+['/api/admin/prize/cur/star/:date/:typ/:got'; post]
+pub fn (mut app App) route_admin_prize_cur_star_typ_got_date(date string, typ string, got string) !vweb.Result {
+	prize := app.db.get_cur_prize()!
+	typ_ := match typ {
+		'daily', '0' { 0 }
+		'bonus1', '1' { 1 }
+		'bonus2', '2' { 2 }
+		else { return app.server_error(400) }
+	}
+	date_ := match date {
+		'today' { util.sdate_now() }
+		else { util.sdate_check(date)! }
+	}
+	mut found := false
+	match got {
+		'got' { found = app.db.set_star_got(prize.id, date_, typ_, true)! }
+		'lost' { found = app.db.set_star_got(prize.id, date_, typ_, false)! }
+		'unset' { found = app.db.set_star_got(prize.id, date_, typ_, none)! }
+		else { return app.server_error(400) }
+	}
+	if !found {
+		return app.server_error(404)
+	} else {
+		return app.json(api.ApiOk{})
+	}
 }

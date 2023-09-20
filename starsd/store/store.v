@@ -14,10 +14,7 @@ mut:
 	get_stars(prize_id u64, from string, till string) ![]Star
 	get_cur_deposits() !int
 	get_deposits(prize_id u64) !int
-}
-
-pub fn Store.new(path string) !&Store {
-	return SqliteDB.new(path)!
+	set_star_got(prize_id u64, date string, typ int, got ?bool) !bool
 }
 
 struct StoreImpl {

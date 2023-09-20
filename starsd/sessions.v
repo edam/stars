@@ -43,6 +43,10 @@ fn (mut s Sessions) close() {
 
 // --
 
+const (
+	perm_admin = 1
+)
+
 [table: sessions]
 struct Session {
 pub:

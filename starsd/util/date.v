@@ -124,3 +124,9 @@ pub fn sdate_sub(date string, days int) !string {
 	yy, mm, dd := date_sub(y, m, d, days)!
 	return sdate(yy, mm, dd)
 }
+
+// check date is valid
+pub fn sdate_check(date string) !string {
+	parse_sdate(date)!
+	return date
+}

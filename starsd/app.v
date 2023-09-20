@@ -11,6 +11,7 @@ pub:
 mut:
 	db       &store.Store = unsafe { nil }
 	sessions &Sessions    [vweb_global] = unsafe { nil }
+	args     &Args        [vweb_global]     = unsafe { nil }
 	session  ?Session
 }
 
@@ -23,22 +24,25 @@ fn App.new() &App {
 }
 
 pub fn (mut app App) run() {
-	args := Args.from_cli()
+	app.args = Args.from_cli()
 
-	app.db = store.Store.new(args.db or { '' }) or { die('db: ${err}') }
+	app.db = match app.args.db.kind {
+		'sqlite' { store.new_sqlite(app.args.db.file or { '' }) or { die('db: ${err}') } }
+		else { die('unsupported database') }
+	}
 	defer {
 		app.db.close() or { die('db: ${err}') }
 	}
 
-	if args.create {
+	if app.args.create {
 		app.db.create() or { die('db: ${err}') }
 	}
 	app.db.update() or { die('db: ${err}') }
 
-	app.sessions = Sessions.new(args.session_ttl) or { die('sessions init fail') }
+	app.sessions = Sessions.new(app.args.session_ttl) or { die('sessions init fail') }
 
 	vweb.run_at(app, vweb.RunParams{
-		port: args.port
+		port: app.args.port
 	}) or { panic(err) }
 }
 
@@ -54,6 +58,19 @@ fn (mut app App) check_auth() bool {
 	} else {
 		return true
 	}
+}
+
+fn (mut app App) check_auth_admin() bool {
+	if !app.check_auth() {
+		return false
+	}
+	if session := app.session {
+		if session.perms & perm_admin != 0 {
+			return true
+		}
+	}
+	app.error_result(403)
+	return false
 }
 
 pub fn (mut app App) not_found() vweb.Result {

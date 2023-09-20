@@ -33,3 +33,5 @@ pub:
 	from string
 	till string
 }
+
+pub struct ApiOk {}
