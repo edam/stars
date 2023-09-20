@@ -44,13 +44,8 @@ fn menu_set_star(date string, typ int) MenuFn {
 			MenuItem{'got', menu_set_star_got(typ, 'got', date)},
 			MenuItem{'lost', menu_set_star_got(typ, 'lost', date)},
 			MenuItem{'unset', menu_set_star_got(typ, 'unset', date)},
-			MenuItem{'err', menu_error},
 		])!
 	}
-}
-
-fn menu_error(mut c Client) ! {
-	return error('no')
 }
 
 fn menu_set_typ_star(typ int) MenuFn {
