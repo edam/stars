@@ -24,6 +24,10 @@ pub fn (mut app App) route_prize_cur() !vweb.Result {
 	prize := app.db.get_cur_prize()!
 	count := app.db.get_cur_star_count()!
 	deposits := app.db.get_cur_deposits()!
+	mut deposits_total := 0
+	for deposit in deposits {
+		deposits_total += deposit.amount
+	}
 	return app.json(api.ApiPrizeCur{
 		prize_id: prize.id
 		start: prize.start or { '' }
@@ -31,8 +35,22 @@ pub fn (mut app App) route_prize_cur() !vweb.Result {
 		goal: prize.goal
 		got: struct {
 			stars: count * prize.star_val
-			deposits: deposits
+			deposits: deposits_total
 		}
+	})
+}
+
+//[middleware: check_auth]
+['/api/prize/cur/deposits']
+pub fn (mut app App) route_prize_cur_deposits() !vweb.Result {
+	prize := app.db.get_cur_prize()!
+	deposits := app.db.get_cur_deposits()!
+	return app.json(api.ApiDeposits{
+		deposits: deposits.map(api.ApiDeposits_Deposit{
+			at: it.at
+			amount: it.amount
+			desc: it.desc
+		})
 	})
 }
 

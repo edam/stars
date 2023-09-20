@@ -44,11 +44,11 @@ pub:
 [table: deposits]
 struct Deposit {
 pub:
-	id          u64    [primary; sql: serial]
-	at          string
-	amount      int
-	prize_id    u64    [fkey: prizes]
-	description string
+	id       u64    [primary; sql: serial]
+	at       string
+	amount   int
+	prize_id u64    [fkey: prizes]
+	desc     string
 }
 
 [table: users]
@@ -120,20 +120,16 @@ fn (mut s StoreImpl) get_stars(prize_id u64, from string, till string) ![]Star {
 	return stars
 }
 
-fn (mut s StoreImpl) get_cur_deposits() !int {
+fn (mut s StoreImpl) get_cur_deposits() ![]Deposit {
 	prize := s.get_cur_prize()!
 	return s.get_deposits(prize.id)
 }
 
-fn (mut s StoreImpl) get_deposits(prize_id u64) !int {
+fn (mut s StoreImpl) get_deposits(prize_id u64) ![]Deposit {
 	deposits := sql s.db {
 		select from Deposit where prize_id == prize_id
 	}!
-	mut total := 0
-	for deposit in deposits {
-		total += deposit.amount
-	}
-	return total
+	return deposits
 }
 
 fn (mut s StoreImpl) set_star_got(prize_id u64, date string, typ int, got ?bool) !bool {

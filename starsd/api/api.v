@@ -35,3 +35,15 @@ pub:
 }
 
 pub struct ApiOk {}
+
+pub struct ApiDeposits_Deposit {
+pub:
+	at     string
+	amount int
+	desc   string
+}
+
+pub struct ApiDeposits {
+pub:
+	deposits []ApiDeposits_Deposit
+}
