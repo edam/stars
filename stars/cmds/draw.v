@@ -5,7 +5,7 @@ import math
 import time
 
 const (
-	title       = '𝔻 𝔸 𝕀 𝕃 𝕐   𝕊 𝕋 𝔸 ℝ 𝕊'
+	stars_title = '𝔻 𝔸 𝕀 𝕃 𝕐   𝕊 𝕋 𝔸 ℝ 𝕊'
 	padding     = '  '
 	width       = 80 - 2 * padding.len - 3
 	month_names = ['', 'ᴊᴀɴ', 'ꜰᴇʙ', 'ᴍᴀʀ', 'ᴀᴩʀ', 'ᴍᴀʏ', 'ᴊᴜɴ',
@@ -108,7 +108,7 @@ fn lcr(left string, centre string, right string) string {
 	rem := cmds.width - len(left) - len(centre) - len(right)
 	pad1 := ' '.repeat(rem / 2)
 	pad2 := ' '.repeat(rem - (rem / 2))
-	return '${left}${pad1}${centre}${pad2}${right}'
+	return '${left}${cmds.reset}${pad1}${centre}${pad2}${cmds.reset}${right}'
 }
 
 fn prt[T](args ...T) {
@@ -123,7 +123,7 @@ fn prt[T](args ...T) {
 
 fn draw_title() {
 	prt('')
-	prt(lcr('~', cmds.title, '~'))
+	prt(lcr(cmds.faint + '~', fg(.white) + cmds.stars_title, cmds.faint + '~'))
 }
 
 fn draw_grand_prize(res api.ApiPrizeCur) {

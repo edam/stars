@@ -20,6 +20,9 @@ fn main() {
 		'last' {
 			client.last() or { die(err) }
 		}
+		'admin' {
+			client.admin() or { die(err) }
+		}
 		else {
 			die('unknown command')
 		}

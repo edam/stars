@@ -15,16 +15,6 @@ mut:
 	session_id ?string
 }
 
-enum Verb {
-	get
-}
-
-const (
-	verbs = {
-		Verb.get: 'GET'
-	}
-)
-
 fn (mut c Client) auth() ! {
 	if c.user == '' || c.psk == '' {
 		die('username and pre-shared key required')
@@ -37,17 +27,22 @@ fn (mut c Client) get[T](uri string) !T {
 	return c.fetch[T](uri, .get)!
 }
 
-fn (mut c Client) fetch[T](uri string, verb Verb) !T {
+fn (mut c Client) post[T](uri string) !T {
+	return c.fetch[T](uri, .post)!
+}
+
+fn (mut c Client) fetch[T](uri string, method http.Method) !T {
 	mut cookies := map[string]string{}
 	if session_id := c.session_id {
 		cookies['session'] = session_id
 	}
-	url := 'http://${c.host}:${c.port}/${uri}'
+	url := 'http://${c.host}:${c.port}${uri}'
 	$if trace_stars ? {
-		eprintln('${cmds.verbs[verb]} ${url}')
+		verb := method.str().to_upper()
+		eprintln('${verb} ${url}')
 	}
 	resp := http.fetch(
-		method: .get
+		method: method
 		url: url
 		cookies: cookies
 	)!
