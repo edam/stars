@@ -8,50 +8,18 @@ pub fn (mut c Client) info() ! {
 	sw := time.new_stopwatch()
 	c.auth()!
 
-	// done := chan bool{}
-	// errs := chan IError{}
-	// res1 := api.ApiPrizeCur{}
-	// res2 := api.ApiWeek{}
-	// go fn (res &api.ApiPrizeCur, mut c Client, done chan bool, errs chan IError) {
-	//	tmp := c.get[api.ApiPrizeCur]('/api/prize/cur') or {
-	//		errs <- err
-	//		return
-	//	}
-	//	unsafe {
-	//		*res = tmp
-	//	}
-	//	done <- true
-	//}(&res1, mut c, done, errs)
-	// go fn (res &api.ApiWeek, mut c Client, done chan bool, errs chan IError) {
-	//	tmp := c.get[api.ApiWeek]('/api/week/cur') or {
-	//		errs <- err
-	//		return
-	//	}
-	//	unsafe {
-	//		*res = tmp
-	//	}
-	//	done <- true
-	//}(&res2, mut c, done, errs)
-	// mut back := 0
-	// for back < 2 {
-	//	select {
-	//		_ := <-done {
-	//			back++
-	//		}
-	//		e := <-errs {
-	//			return e
-	//		}
-	//	}
-	//}
-
 	res1 := c.get[api.ApiPrizeCur]('/api/prize/cur')!
 	res2 := c.get[api.ApiWeek]('/api/week/cur')!
+	res3 := c.get[api.ApiWins]('/api/prize/cur/wins')!
 
 	prt('')
 	prt(lcr(faint + '~', fg(.white) + stars_title, faint + '~'))
 
 	draw_grand_prize(res1)
 	draw_weekly_stars(true, res2)
+	prt('')
+	prt(lcr('ᴍᴏɴᴛʜʟʏ ᴍᴇᴅᴀʟꜱ', '', 'ʙᴏɴᴜꜱ '))
+	draw_month_of_wins('', res3.wins, false)
 	draw_server_line(c.host, sw.elapsed().milliseconds())
 }
 
@@ -84,9 +52,9 @@ fn draw_grand_prize(res api.ApiPrizeCur) {
 	prt(lcr(fg(.green) + '${info1[1]} = £${info2[1]}' + reset, '', 'ETA: ${eta}'))
 }
 
-fn draw_star(star api.ApiWeek_Star, total &int, avail &int) string {
-	if got := star.got {
-		if got {
+fn draw_star(got ?bool, total &int, avail &int) string {
+	if got_ := got {
+		if got_ {
 			(*total)++
 			return '⭐'
 		} else {
@@ -117,11 +85,12 @@ fn draw_weekly_stars(this bool, res api.ApiWeek) {
 
 	mut total := 0
 	mut avail := 0
-	mut sline := '  ' + res.stars.filter(it.typ == 0).map(draw_star(it, &total, &avail)).join('  ')
+	mut sline := '  ' +
+		res.stars.filter(it.typ == 0).map(draw_star(it.got, &total, &avail)).join('  ')
 	for typ in [1, 2] {
 		bstars := res.stars.filter(it.typ == typ)
 		if bstars.len == 1 {
-			sline += '      ' + draw_star(bstars[0], &total, &avail)
+			sline += '      ' + draw_star(bstars[0].got, &total, &avail)
 		}
 	}
 	lost := res.stars.len - total - avail

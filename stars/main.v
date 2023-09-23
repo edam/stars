@@ -26,12 +26,16 @@ fn main() {
 		'deposits' {
 			client.deposits() or { die(err) }
 		}
+		'wins' {
+			client.wins() or { die(err) }
+		}
 		'help' {
 			println('Usage: ${prog()} [COMMAND]')
 			println('')
 			println('Commands:')
 			println('  info      Prize pot and daily stars overview (default)')
 			println("  last      Last week's stars")
+			println('  wins      Show weekly wins and monthly medals')
 			println('  deposits  Deposit details')
 			println('  admin     Admin menu')
 		}

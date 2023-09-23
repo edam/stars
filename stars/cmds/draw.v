@@ -66,7 +66,7 @@ fn len(str string) int {
 			}
 		} else if c == `\e` {
 			in_esc = true
-		} else if c in [`⭐`, `❌`, `❔`, `🌟`] {
+		} else if c in [`⭐`, `❌`, `❔`] {
 			ret += 2
 		} else {
 			ret++
