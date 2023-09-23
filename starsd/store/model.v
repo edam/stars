@@ -105,10 +105,9 @@ fn (mut s StoreImpl) get_cur_prize() !Prize {
 	return *(s.prize)
 }
 
-fn (mut s StoreImpl) get_cur_star_count() !int {
-	prize := s.get_cur_prize()!
+fn (mut s StoreImpl) get_star_count(prize_id u64) !int {
 	count := sql s.db {
-		select count from Star where prize_id == prize.id && got == true
+		select count from Star where prize_id == prize_id && got == true
 	}!
 	return count
 }
@@ -118,11 +117,6 @@ fn (mut s StoreImpl) get_stars(prize_id u64, from string, till string) ![]Star {
 		select from Star where prize_id == prize_id && at >= from && at <= till order by at
 	}!
 	return stars
-}
-
-fn (mut s StoreImpl) get_cur_deposits() ![]Deposit {
-	prize := s.get_cur_prize()!
-	return s.get_deposits(prize.id)
 }
 
 fn (mut s StoreImpl) get_deposits(prize_id u64) ![]Deposit {
@@ -143,4 +137,10 @@ fn (mut s StoreImpl) set_star_got(prize_id u64, date string, typ int, got ?bool)
 		update Star set got = got where prize_id == prize_id && at == date && typ == typ
 	}!
 	return true
+}
+
+fn (mut s StoreImpl) get_wins(prize_id u64) ![]Win {
+	return sql s.db {
+		select from Win where prize_id == prize_id order by at
+	}!
 }

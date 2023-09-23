@@ -22,8 +22,8 @@ pub fn (mut app App) route_auth(username string) !vweb.Result {
 ['/api/prize/cur'; get]
 pub fn (mut app App) route_prize_cur() !vweb.Result {
 	prize := app.db.get_cur_prize()!
-	count := app.db.get_cur_star_count()!
-	deposits := app.db.get_cur_deposits()!
+	count := app.db.get_star_count(prize.id)!
+	deposits := app.db.get_deposits(prize.id)!
 	mut deposits_total := 0
 	for deposit in deposits {
 		deposits_total += deposit.amount
@@ -44,9 +44,9 @@ pub fn (mut app App) route_prize_cur() !vweb.Result {
 ['/api/prize/cur/deposits']
 pub fn (mut app App) route_prize_cur_deposits() !vweb.Result {
 	prize := app.db.get_cur_prize()!
-	deposits := app.db.get_cur_deposits()!
+	deposits := app.db.get_deposits(prize.id)!
 	return app.json(api.ApiDeposits{
-		deposits: deposits.map(api.ApiDeposits_Deposit{
+		deposits: deposits.map(api.Api_Deposit{
 			at: it.at
 			amount: it.amount
 			desc: it.desc
@@ -80,10 +80,48 @@ pub fn (mut app App) route_week_prize_date(prize_id u64, date string) !vweb.Resu
 	return app.json(api.ApiWeek{
 		from: from
 		till: till
-		stars: stars.map(api.ApiWeek_Star{
+		stars: stars.map(api.Api_Star{
 			at: it.at
 			got: it.got
 			typ: it.typ
+		})
+	})
+}
+
+[middleware: check_auth]
+['/api/prize/cur/wins/all'; get]
+pub fn (mut app App) route_prize_cur_wins_all() !vweb.Result {
+	prize := app.db.get_cur_prize()!
+	wins := app.db.get_wins(prize.id)!
+	return app.json(api.ApiWins{
+		wins: wins.map(api.Api_Win{
+			at: it.at
+			got: it.got
+		})
+	})
+}
+
+[middleware: check_auth]
+['/api/prize/cur/wins'; get]
+pub fn (mut app App) route_prize_cur_wins() !vweb.Result {
+	prize := app.db.get_cur_prize()!
+	wins := app.db.get_wins(prize.id)!
+	mut start := 0
+	mut count := 0
+	for i, win in wins {
+		if got := win.got {
+			if got {
+				count++
+			}
+		}
+		if count % 4 == 0 {
+			start = i
+		}
+	}
+	return app.json(api.ApiWins{
+		wins: wins[start..].map(api.Api_Win{
+			at: it.at
+			got: it.got
 		})
 	})
 }

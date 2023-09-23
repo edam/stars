@@ -18,7 +18,7 @@ pub:
 	}
 }
 
-pub struct ApiWeek_Star {
+pub struct Api_Star {
 pub:
 	at  string
 	typ int
@@ -28,7 +28,7 @@ pub:
 
 pub struct ApiWeek {
 pub:
-	stars []ApiWeek_Star
+	stars []Api_Star
 
 	from string
 	till string
@@ -36,7 +36,7 @@ pub:
 
 pub struct ApiOk {}
 
-pub struct ApiDeposits_Deposit {
+pub struct Api_Deposit {
 pub:
 	at     string
 	amount int
@@ -45,5 +45,17 @@ pub:
 
 pub struct ApiDeposits {
 pub:
-	deposits []ApiDeposits_Deposit
+	deposits []Api_Deposit
+}
+
+pub struct Api_Win {
+pub:
+	at  string
+	got ?bool
+}
+
+pub struct ApiWins {
+pub:
+	wins  []Api_Win
+	stars []Api_Star
 }
