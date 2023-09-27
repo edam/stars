@@ -4,7 +4,7 @@ import edam.ggetopt { die, prog }
 import cmds
 
 fn main() {
-	args := Args.from_cli()
+	args := Args.from_cli_and_conf()
 
 	mut client := cmds.Client{
 		host: args.host
@@ -14,7 +14,7 @@ fn main() {
 	}
 
 	match args.cmd or { '' } {
-		'info', '' {
+		'stars', '' {
 			client.info() or { die(err) }
 		}
 		'last' {
@@ -26,21 +26,15 @@ fn main() {
 		'deposits' {
 			client.deposits() or { die(err) }
 		}
-		'wins' {
+		'wins', 'medals' {
 			client.wins() or { die(err) }
 		}
-		'help' {
-			println('Usage: ${prog()} [COMMAND]')
-			println('')
-			println('Commands:')
-			println('  info      Prize pot and daily stars overview (default)')
-			println("  last      Last week's stars")
-			println('  wins      Show weekly wins and monthly medals')
-			println('  deposits  Deposit details')
-			println('  admin     Admin menu')
+		'help', '?' {
+			ggetopt.print_help(options)
+			exit(0)
 		}
 		else {
-			die('unknown command')
+			die('unknown command, try `${prog()} --help`')
 		}
 	}
 }

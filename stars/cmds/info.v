@@ -9,7 +9,7 @@ pub fn (mut c Client) info() ! {
 	c.auth()!
 
 	res1 := c.get[api.ApiPrizeCur]('/api/prize/cur')!
-	res2 := c.get[api.ApiWeek]('/api/week/cur')!
+	res2 := c.get[api.ApiWeek]('/api/prize/cur/week/cur')!
 	res3 := c.get[api.ApiWins]('/api/prize/cur/wins')!
 
 	prt('')
@@ -17,9 +17,8 @@ pub fn (mut c Client) info() ! {
 
 	draw_grand_prize(res1)
 	draw_weekly_stars(true, res2)
-	prt('')
 	prt(lcr('ᴍᴏɴᴛʜʟʏ ᴍᴇᴅᴀʟꜱ', '', 'ʙᴏɴᴜꜱ '))
-	draw_month_of_wins('', res3.wins, false)
+	draw_month_of_wins(res3.wins, none)
 	draw_server_line(c.host, sw.elapsed().milliseconds())
 }
 

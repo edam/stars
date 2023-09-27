@@ -20,7 +20,7 @@ pub mut:
 }
 
 const options = [
-	ggetopt.text('Usage: ${ggetopt.prog()} [OPTION]... COMMAND'),
+	ggetopt.text('Usage: ${ggetopt.prog()} [OPTION]... [COMMAND]'),
 	ggetopt.text(''),
 	ggetopt.text('Options:'),
 	ggetopt.opt('conf', `c`).arg('FILE', true)
@@ -30,6 +30,13 @@ const options = [
 	ggetopt.opt('port', `p`).arg('PORT', true)
 		.help('port to connect to (${default_port})'),
 	ggetopt.opt_help(),
+	ggetopt.text(''),
+	ggetopt.text('Commands:'),
+	ggetopt.text('  stars     Grand prize, daily stars and medals overview (default)'),
+	ggetopt.text("  last      Last week's stars"),
+	ggetopt.text('  medals    Weekly wins and monthly medals'),
+	ggetopt.text('  deposits  Show deposit details'),
+	ggetopt.text('  admin     Admin menu'),
 ]
 
 fn (mut a Args) pre_process_arg(arg string, val ?string) ! {
@@ -83,7 +90,7 @@ fn (mut a Args) load_conf() ! {
 	}
 }
 
-fn Args.from_cli() &Args {
+fn Args.from_cli_and_conf() &Args {
 	mut args := &Args{}
 	ggetopt.getopt_long_cli(options, args.pre_process_arg) or { exit(1) }
 	args.load_conf() or {

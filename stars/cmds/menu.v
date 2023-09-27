@@ -10,35 +10,47 @@ type MenuFn = fn (mut c Client) !
 
 struct MenuItem {
 	text    ?string
-	handler MenuFn [required]
+	handler ?MenuFn
 }
 
 fn do_menu(mut c Client, menu []MenuItem) ! {
 	mut idx := 0
+    do_menu_sel(mut c, menu, &idx) !
+}
+
+fn do_menu_sel(mut c Client, menu []MenuItem, idx &int) ! {
 	for {
-		sel := do_menu_sel(mut c, &idx, menu)!
+		sel := do_menu_sel_(mut c, idx, menu)!
 	    println('▶ ${menu[sel].text or {''}}')
-		menu[sel].handler(mut c) or {
-            if err.str() in [ 'back', 'aborted' ] {
-		        term.clear_previous_line()
-            }
-			if err.str() == 'back' {
-				continue
-			}
-			return err
-		}
-		return error('return') // if handler doesn't return any error
+        if handler := menu[sel].handler {
+	        handler(mut c) or {
+                if err.str() in [ 'back', 'aborted' ] {
+		            term.clear_previous_line()
+                }
+			    if err.str() == 'back' {
+				    continue
+			    }
+			    return err
+		    }
+		    return error('return') // if handler doesn't return any error
+        }
+        assert false, "selected non-entry menu"
 	}
 }
 
-fn do_menu_sel(mut c Client, idx_ &int, menu []MenuItem) !int {
+fn do_menu_sel_(mut c Client, idx_ &int, menu []MenuItem) !int {
     mut idxs := []int{}
 	for i, item in menu {
-        if text := item.text {
+        if handler := item.handler {
+            if text := item.text {
 		    println('  ${text}')
             idxs << i
-        } else {
-            item.handler(mut c)!
+
+            } else {
+            handler(mut c)!
+            }
+        } else if text := item.text {
+            println(text)
         }
 	}
 	mut idx := *idx_

@@ -45,27 +45,33 @@ pub fn date_to_dow(y int, m int, d int) !int {
 	return (yc + mc + cc + d + lyc + 6) % 7 + 1
 }
 
-// subtract small number of days from a date
-fn date_sub(y int, m int, d int, days int) !(int, int, int) {
-	if d > days {
-		return y, m, d - days
+// add small number of days to a date
+pub fn date_add(y int, m int, d int, days int) !(int, int, int) {
+	if days > 0 {
+		md := month_days(y, m)!
+		if d + days <= md {
+			return y, m, d + days
+		}
+		yy := if m == 12 { y + 1 } else { y }
+		mm := if m == 12 { 1 } else { m + 1 }
+		dd := d + days - md
+		return yy, mm, dd
+	} else if days < 0 {
+		if d > -days {
+			return y, m, d + days
+		}
+		mm := if m > 1 { m - 1 } else { 12 }
+		yy := if m > 1 { y } else { y - 1 }
+		dd := d + month_days(yy, mm)! + days
+		return yy, mm, dd
+	} else {
+		return y, m, d
 	}
-	mm := if m > 1 { m - 1 } else { 12 }
-	yy := if m > 1 { y } else { y - 1 }
-	dd := d + month_days(yy, mm)! - days
-	return yy, mm, dd
 }
 
-// add small number of days to a date
-fn date_add(y int, m int, d int, days int) !(int, int, int) {
-	md := month_days(y, m)!
-	if d + days <= md {
-		return y, m, d + days
-	}
-	yy := if m == 12 { y + 1 } else { y }
-	mm := if m == 12 { 1 } else { m + 1 }
-	dd := d + days - md
-	return yy, mm, dd
+[inline]
+pub fn date_sub(y int, m int, d int, days int) !(int, int, int) {
+	return date_add(y, m, d, -days)!
 }
 
 // get date at start of week
@@ -118,11 +124,10 @@ pub fn sdate_add(date string, days int) !string {
 	return sdate(yy, mm, dd)
 }
 
-// add a few days to an sdate
+// subtract a few days to an sdate
+[inline]
 pub fn sdate_sub(date string, days int) !string {
-	y, m, d := parse_sdate(date)!
-	yy, mm, dd := date_sub(y, m, d, days)!
-	return sdate(yy, mm, dd)
+	return sdate_add(date, -days)!
 }
 
 // check date is valid

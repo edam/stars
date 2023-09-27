@@ -7,11 +7,12 @@ pub:
 
 pub struct ApiPrizeCur {
 pub:
-	prize_id u64
-	start    string
-	stars    int
-	goal     int
-	got      struct {
+	prize_id  u64
+	start     string
+	stars     int
+	goal      int
+	first_dow int
+	got       struct {
 	pub:
 		stars    int
 		deposits int
@@ -23,7 +24,6 @@ pub:
 	at  string
 	typ int
 	got ?bool
-	//    special ?string
 }
 
 pub struct ApiWeek {
@@ -51,11 +51,11 @@ pub:
 pub struct Api_Win {
 pub:
 	at  string
-	got ?bool
+	got bool
 }
 
 pub struct ApiWins {
 pub:
-	wins  []Api_Win
-	stars []Api_Star
+	wins []Api_Win
+	next string
 }
