@@ -4,7 +4,7 @@ import toml
 
 const (
 	db_regex              = r'^([a-z]+)://(?:([^:@/]+)(?::([^@]+))?@)?([-a-z.]+)(?::([0-9]+))?(?:/([-a-z.]+)?)?$'
-	db_kinds              = ['sqlite', 'pgsql']
+	db_backends           = ['sqlite', 'pgsql']
 	days_of_week          = ['', 'mo', 'tu', 'we', 'th', 'fr', 'sa', 'su']
 
 	default_conf          = '~/.starsrc'
@@ -21,12 +21,12 @@ pub mut:
 	conf string = default_conf
 	db   struct {
 	pub mut:
-		kind string = default_db_kind
-		host ?string
-		port ?int
-		user ?string
-		pass ?string
-		file ?string
+		backend  string = default_db_kind
+		host     ?string
+		port     ?int
+		username ?string
+		password ?string
+		file     ?string
 	}
 
 	create      bool
@@ -49,24 +49,20 @@ const options = [
 		.help('listening port [${default_port}]'),
 	ggetopt.opt('session-ttl', none).arg('S', true)
 		.help('auth sessions TTL [${default_session_ttl}]'),
-	ggetopt.opt('first-dow', none).arg('DOW', true)
-		.help('set first day of week [${default_first_dow_str}]'),
-	ggetopt.opt('last-dow', none).arg('DOW', true)
-		.help('set last day of week instead'),
 	ggetopt.opt_help(),
 	ggetopt.text(''),
 	ggetopt.text('Database options:'),
 	// ggetopt.opt('db', none).arg('URL', true)
 	//	.help('whole database spec\nformat: TYPE://USER:PASS@HOST:PORT/FILE'),
 	ggetopt.opt('db-type', none).arg('TYPE', true)
-		.help('database selection [${default_db_kind}]\noptions are: ${db_kinds.join(', ')}'),
+		.help('database selection [${default_db_kind}]\noptions are: ${db_backends.join(', ')}'),
 	ggetopt.opt('db-host', none).arg('HOST', true)
 		.help('database host'),
 	ggetopt.opt('db-port', none).arg('PORT', true)
 		.help('database port'),
-	ggetopt.opt('db-user', none).arg('USER', true)
+	ggetopt.opt('db-username', none).arg('USER', true)
 		.help('database username'),
-	ggetopt.opt('db-pass', none).arg('PASS', true)
+	ggetopt.opt('db-password', none).arg('PASS', true)
 		.help('database password'),
 	ggetopt.opt('db-file', none).arg('FILE', true)
 		.help('database file'),
@@ -102,19 +98,6 @@ fn (mut a Args) process_arg(arg string, val ?string) ! {
 				return error('--session-ttl: must be > 0')
 			}
 		}
-		'first-dow' {
-			a.first_dow = days_of_week.index(val or { '' }[0..2].to_lower())
-			if a.first_dow < 1 {
-				return error('--first-dow: invalid day of week')
-			}
-		}
-		'last-dow' {
-			last_dow := days_of_week.index(val or { '' }[0..2].to_lower())
-			if last_dow < 1 {
-				return error('--last-dow: invalid day of week')
-			}
-			a.first_dow = if last_dow == 7 { 1 } else { last_dow + 1 }
-		}
 		//'db' {
 		//	mut re := regex.regex_opt(db_regex)!
 		//	println(re.get_code())
@@ -122,21 +105,21 @@ fn (mut a Args) process_arg(arg string, val ?string) ! {
 		//	if !re.matches_string(str) {
 		//		return error('--db: invalid format')
 		//	}
-		//	kind := re.get_group_by_id(str, 0)
-		//	user := re.get_group_by_id(str, 1)
-		//	pass := re.get_group_by_id(str, 2)
+		//	backend := re.get_group_by_id(str, 0)
+		//	username := re.get_group_by_id(str, 1)
+		//	password := re.get_group_by_id(str, 2)
 		//	host := re.get_group_by_id(str, 3)
 		//	port := re.get_group_by_id(str, 4).int()
 		//	file := re.get_group_by_id(str, 5)
 		//	println(re.get_group_list())
-		//	println('kind[${kind}] user[${user}] pass[${pass}] host[${host}] port[${port}] file[${file}]')
+		//	println('backend[${backend}] username[${username}] password[${password}] host[${host}] port[${port}] file[${file}]')
 		//}
 		'db-type' {
 			sval := val or { '' }
-			if sval !in db_kinds {
-				return error('--db-type: invalid TYPE, options are: ' + db_kinds.join(', '))
+			if sval !in db_backends {
+				return error('--db-type: invalid TYPE, options are: ' + db_backends.join(', '))
 			}
-			a.db.kind = sval
+			a.db.backend = sval
 		}
 		'db-host' {
 			a.db.host = val or { '' }
@@ -148,11 +131,11 @@ fn (mut a Args) process_arg(arg string, val ?string) ! {
 			}
 			a.db.port = ival
 		}
-		'db-user' {
-			a.db.user = val or { '' }
+		'db-username' {
+			a.db.username = val or { '' }
 		}
-		'db-pass' {
-			a.db.pass = val or { '' }
+		'db-password' {
+			a.db.password = val or { '' }
 		}
 		'db-file' {
 			a.db.file = val or { '' }
@@ -168,70 +151,56 @@ fn (mut a Args) load_conf() ! {
 		if val := conf.value_opt('server.port') {
 			ival := val.int()
 			if ival > 1024 {
-				return error('[server] port must be > 1024')
+				return error('[server.port] must be > 1024')
 			}
 			a.port = ival
 		}
-		if val := conf.value_opt('server.first-dow') {
-			ival := days_of_week.index(val.string()[0..2].to_lower())
-			if ival < 1 {
-				return error('[server.first-dow] invalid day of week')
-			}
-			a.first_dow = ival
-		}
-		if val := conf.value_opt('server.last-dow') {
-			ival := days_of_week.index(val.string()[0..2].to_lower())
-			if ival < 1 {
-				return error('[server.last-dow] invalid day of week')
-			}
-			a.first_dow = if ival == 7 { 1 } else { ival + 1 }
-		}
-		if val := conf.value_opt('server.db.type') {
+		if val := conf.value_opt('db.type') {
 			sval := val.string()
-			if sval !in db_kinds {
-				return error('[server.db] type: invalid, options are: ' + db_kinds.join(', '))
+			if sval !in db_backends {
+				return error('[db.type] invalid, options are: ' + db_backends.join(', '))
 			}
-			a.db.kind = sval
+			a.db.backend = sval
 		}
-		if val := conf.value_opt('server.db.host') {
+		if val := conf.value_opt('db.host') {
 			sval := val.string()
 			if sval == '' {
-				return error('[server.db] host: empty')
+				return error('[db.host] empty')
 			}
 			a.db.host = sval
 		}
-		if val := conf.value_opt('server.db.port') {
+		if val := conf.value_opt('db.port') {
 			ival := val.int()
 			if ival <= 0 || ival > 65535 {
-				return error('[server.db] port: invalid PORT')
+				return error('[db.port] invalid')
 			}
 			a.db.port = ival
 		}
-		if val := conf.value_opt('server.db.user') {
+		if val := conf.value_opt('db.username') {
 			sval := val.string()
 			if sval == '' {
-				return error('[server.db] user: empty')
+				return error('[db.username] empty')
 			}
-			a.db.user = sval
+			a.db.username = sval
 		}
-		if val := conf.value_opt('server.db.pass') {
+		if val := conf.value_opt('db.password') {
 			sval := val.string()
 			if sval == '' {
-				return error('[server.db] pass: empty')
+				return error('[db.password] empty')
 			}
-			a.db.pass = sval
+			a.db.password = sval
 		}
-		if val := conf.value_opt('server.db.file') {
+		if val := conf.value_opt('db.file') {
 			sval := val.string()
 			if sval == '' {
-				return error('[server.db] file: empty')
+				return error('[db.file] empty')
 			}
 			a.db.file = sval
 		}
 	}
 }
 
-fn Args.from_cli() &Args {
+fn Args.from_cli_and_conf() &Args {
 	mut args := &Args{}
 	ggetopt.getopt_long_cli(options, args.pre_process_arg) or { exit(1) }
 	args.load_conf() or {
@@ -242,7 +211,7 @@ fn Args.from_cli() &Args {
 	if rest.len > 0 {
 		ggetopt.die('extra arguments on commandline')
 	}
-	match args.db.kind {
+	match args.db.backend {
 		'sqlite' {
 			if args.db.file == none {
 				ggetopt.die('sqlite FILE required')
@@ -252,7 +221,7 @@ fn Args.from_cli() &Args {
 			if args.db.host == none || args.db.port == none {
 				ggetopt.die('pgsql HOST and PORT required')
 			}
-			if args.db.user == none || args.db.pass == none {
+			if args.db.username == none || args.db.password == none {
 				ggetopt.die('pgsql USER and PASS required')
 			}
 		}

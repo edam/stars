@@ -2,10 +2,18 @@
 # starsd service.  All values are commented out and set at their defaults.  For
 # more info, please visit http://github.com/edam/stars.
 
+[client]
+#username = ''
+#password = ''
+
 [server]
 #host = "localhost"
 #port = 8070
 
-[client]
+[db]
+#type = 'sqlite' # sqlite, pgsql
+#file = 'stars.db'
+#host = ''
+#port = 5432
 #username = ''
 #password = ''

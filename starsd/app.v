@@ -24,9 +24,9 @@ fn App.new() &App {
 }
 
 pub fn (mut app App) run() {
-	app.args = Args.from_cli()
+	app.args = Args.from_cli_and_conf()
 
-	app.db = match app.args.db.kind {
+	app.db = match app.args.db.backend {
 		'sqlite' { store.new_sqlite(app.args.db.file or { '' }) or { die('db: ${err}') } }
 		else { die('unsupported database') }
 	}
