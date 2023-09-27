@@ -4,7 +4,7 @@ import api
 import term
 import util
 
-const star_types = ['daily', '1st bonus', '2nd bonus']
+const star_types = ['daily', '1st bonus', '2nd bonus', 'monthly bonus']
 
 const dow_names = ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
@@ -37,16 +37,19 @@ fn menu_quit(mut c Client) ! {
 fn menu_stars(mut c Client) ! {
 	stars := c.get[api.ApiWeek]('/api/prize/cur/week/cur')!
 	mut menu := []MenuItem{}
-	for star in stars.stars {
+	mut idx := -1
+	for i, star in stars.stars {
 		got := if got_ := star.got {
 			if got_ { '⭐' } else { '❌' }
 		} else {
+			idx = if idx == -1 { i } else { idx }
 			'❔'
 		}
 		title := '${got} ${star.at} (${cmds.star_types[star.typ]})'
 		menu << MenuItem{title, menu_set_star(star.at, star.typ)}
 	}
-	do_menu(mut c, menu)!
+	idx = if idx == -1 { 0 } else { idx }
+	do_menu_sel(mut c, menu, &idx)!
 }
 
 fn menu_set_star(date string, typ int) MenuFn {
@@ -100,7 +103,7 @@ fn menu_set_star_date(date &string) MenuFn {
 fn menu_set_star_got(typ int, got string, date &string) MenuFn {
 	return fn [typ, got, date] (mut c Client) ! {
 		println('setting ${cmds.star_types[typ]} star for \'${*date}\' to ${got}')
-		c.post[api.ApiOk]('/api/admin/prize/cur/star/${*date}/${typ}/${got}')!
+		c.put[api.ApiOk]('/api/admin/prize/cur/star/${*date}/${typ}/${got}')!
 	}
 }
 
@@ -166,23 +169,62 @@ fn menu_delete_last_win_sure(date string) MenuFn {
 	}
 }
 
+// [][ date, got, typ ]
+fn menu_setup_parse_stars(from string, stars []api.Api_Star) ![][]string {
+	till := util.sdate_add(from, 6)!
+	mut ret := [][]string{}
+	for typ := 0; typ <= 3; typ++ {
+		mut any_found := false
+		for date := from; date <= till; {
+			mut found := false
+			for star in stars {
+				if star.at == date && star.typ == typ {
+					got := if got_ := star.got {
+						if got_ { '⭐' } else { '❌' }
+					} else {
+						'❔'
+					}
+					ret << [date, got, typ.str()]
+					any_found = true
+					found = true
+				}
+			}
+			if !found && typ == 0 {
+				ret << [date, '--', '0']
+			}
+			date = util.sdate_add(date, 1)!
+		}
+		if !any_found && typ in [1, 2] {
+			ret << [till, '--', typ.str()]
+		}
+	}
+	return ret
+}
+
 fn menu_setup_week_stars() MenuFn {
 	mut when := 'cur'
-	mut idx := 0
 	pwhen := &when
-	return fn [idx, pwhen] (mut c Client) ! {
+	return fn [pwhen] (mut c Client) ! {
 		for {
-			println('FETCH ${*pwhen}')
-			stars := c.get[api.ApiWeek]('/api/prize/cur/week/${*pwhen}')!
-			println('GOT ${stars}')
+			res := c.get[api.ApiWeek]('/api/prize/cur/week/${*pwhen}')!
 			unsafe {
-				*pwhen = stars.from
+				*pwhen = res.from
 			}
-			do_menu_sel(mut c, [
-				MenuItem{'Week: ${stars.from} - ${stars.till}', none},
-				MenuItem{'prev', menu_setup_week_move(pwhen, -7)},
-				MenuItem{'next', menu_setup_week_move(pwhen, 7)},
-			], &idx) or {
+			stars_fn := fn [pwhen] (mut c Client) ! {
+				res := c.get[api.ApiWeek]('/api/prize/cur/week/${*pwhen}')!
+				mut stars := ''
+				for pair in menu_setup_parse_stars(*pwhen, res.stars)! {
+					info := if pair[2].int() > 0 { 'B${pair[2]}-' } else { '' }
+					stars += '  ${info}${pair[1]}'
+				}
+				println('Stars: ${stars}')
+			}
+			do_menu(mut c, [
+				MenuItem{none, stars_fn},
+				MenuItem{'edit ${res.from} - ${res.till}', menu_setup_week_edit(pwhen)},
+				MenuItem{'next', menu_setup_week_move(pwhen, true)},
+				MenuItem{'prev', menu_setup_week_move(pwhen, false)},
+			]) or {
 				if err.str() != 'return' {
 					return err
 				}
@@ -191,11 +233,67 @@ fn menu_setup_week_stars() MenuFn {
 	}
 }
 
-fn menu_setup_week_move(pwhen &string, days int) MenuFn {
-	return fn [pwhen, days] (mut c Client) ! {
+fn menu_setup_week_move(pwhen &string, next bool) MenuFn {
+	return fn [pwhen, next] (mut c Client) ! {
 		unsafe {
-			*pwhen = util.sdate_add(*pwhen, days)!
+			*pwhen = util.sdate_add(*pwhen, if next { 7 } else { -7 })!
 			term.clear_previous_line()
 		}
 	}
+}
+
+fn menu_setup_week_edit(pwhen &string) MenuFn {
+	return fn [pwhen] (mut c Client) ! {
+		mut idx := 0
+		for {
+			res := c.get[api.ApiWeek]('/api/prize/cur/week/${*pwhen}')!
+			mut menu := []MenuItem{}
+			for pair in menu_setup_parse_stars(*pwhen, res.stars)! {
+				bonus := if pair[2].int() > 0 {
+					'B${pair[2]}'
+				} else {
+					cmds.dow_names[util.sdate_to_dow(pair[0])!]
+				}
+				entry := '${pair[1]} ${bonus}'
+				if pair[1] == '--' {
+					menu << MenuItem{'add ${entry}', menu_setup_week_add(&idx, pair[2].int(),
+						pair[0])}
+				} else if pair[1] == '❔' {
+					menu << MenuItem{'del ${entry}', menu_setup_week_delete(&idx, pair[2].int(),
+						pair[0])}
+				} else {
+					menu << MenuItem{faint + 'del' + reset + ' ${entry}', menu_setup_week_nop}
+				}
+			}
+			do_menu_sel(mut c, menu, &idx) or {
+				if err.str() != 'return' {
+					return err
+				}
+			}
+		}
+	}
+}
+
+fn menu_setup_week_add(idx &int, typ int, date string) MenuFn {
+	return fn [idx, typ, date] (mut c Client) ! {
+		term.clear_previous_line()
+		c.post[api.ApiOk]('/api/admin/prize/cur/star/${date}/${typ}')!
+		unsafe {
+			(*idx)++
+		}
+	}
+}
+
+fn menu_setup_week_delete(idx &int, typ int, date string) MenuFn {
+	return fn [idx, typ, date] (mut c Client) ! {
+		term.clear_previous_line()
+		c.delete[api.ApiOk]('/api/admin/prize/cur/star/${date}/${typ}')!
+		unsafe {
+			(*idx)++
+		}
+	}
+}
+
+fn menu_setup_week_nop(mut c Client) ! {
+	term.clear_previous_line()
 }

@@ -35,6 +35,10 @@ fn (mut c Client) delete[T](uri string) !T {
 	return c.fetch[T](uri, .delete)!
 }
 
+fn (mut c Client) put[T](uri string) !T {
+	return c.fetch[T](uri, .put)!
+}
+
 fn (mut c Client) fetch[T](uri string, method http.Method) !T {
 	mut cookies := map[string]string{}
 	if session_id := c.session_id {
