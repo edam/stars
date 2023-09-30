@@ -132,7 +132,19 @@ fn (mut s StoreImpl) get_stars(prize_id u64, from string, till string) ![]Star {
 	stars := sql s.db {
 		select from Star where prize_id == prize_id && at >= from && at <= till order by at
 	}!
-	return stars
+	return stars.sorted_with_compare(fn (a &Star, b &Star) int {
+		return if a.typ == b.typ {
+			if a.at < b.at {
+				-1
+			} else if a.at > b.at {
+				1
+			} else {
+				0
+			}
+		} else {
+			a.typ - b.typ
+		}
+	})
 }
 
 fn (mut s StoreImpl) get_deposits(prize_id u64) ![]Deposit {
