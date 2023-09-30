@@ -35,10 +35,32 @@ fn menu_quit(mut c Client) ! {
 }
 
 fn menu_stars(mut c Client) ! {
-	stars := c.get[api.ApiWeek]('/api/prize/cur/week/cur')!
+	cur := c.get[api.ApiWeek]('/api/prize/cur/week/cur')!
+	mut stars := []api.Api_Star{}
+	if cur.stars.len > 0 && cur.stars[0].got == none {
+		// TODO: go back further!
+		last := c.get[api.ApiWeek]('/api/prize/cur/week/last')!
+		for star in last.stars {
+			if star.got == none {
+				unsafe {
+					stars = last.stars
+				}
+				break
+			}
+		}
+		if stars.len == 0 {
+			unsafe {
+				stars = cur.stars
+			}
+		}
+	} else {
+		unsafe {
+			stars = cur.stars
+		}
+	}
 	mut menu := []MenuItem{}
 	mut idx := -1
-	for i, star in stars.stars {
+	for i, star in stars {
 		got := if got_ := star.got {
 			if got_ { '⭐' } else { '❌' }
 		} else {
