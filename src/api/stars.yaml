@@ -1,0 +1,323 @@
+openapi: 3.0.0
+info:
+  version: 1.0.0
+  title: Daily Stars API
+  description: API for the Daily Stars behvaioural incentives project
+
+paths:
+
+  /api/auth/{username}:
+    get:
+      description: >
+        Get authentication challenge.  This method sets up a valid session,
+        whose ID is `sha256( SECRET + ":" + CHALLENGE )`.  The client can begin
+        to use the session immediately by calculating the ID.
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  challenge:
+                    type: string
+
+  /api/prize/cur:
+    get:
+      description: >
+        Get current prize.
+    responses:
+      '200':
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                prize_id:
+                  type: integer
+                  format: int64
+                start:
+                  type: string
+                stars:
+                  type: integer
+                goal:
+                  type: integer
+                first_dow:
+                  type: integer
+                got:
+                  type: object
+                  properties:
+                    stars:
+                      type: integer
+                    deposits:
+                      type: integer
+
+  /api/prize/cur/deposits:
+    get:
+      description: >
+        Get information about all Deposits for the current prize.
+    responses:
+      '200':
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                deposits:
+                  type: array
+                  items: $ref: '#/components/schemas/Deposit'
+
+  /api/prize/{prize_id}/week/{date}:
+    get:
+      description: >
+        Get information about a given week's Daily Stars.
+      parameters:
+        - name: prize_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: date
+          in: path
+          required: true
+          schema:
+            type: string
+            format: date
+    responses:
+      '200':
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                stars:
+                  type: array
+                  items: $ref: '#/components/schemas/Star'
+                from:
+                  type: string
+                  format: date
+                till:
+                  type: string
+                  format: date
+
+  /api/prize/cur/wins/all:
+    get:
+      description: >
+        Get information about the current week's Daily Stars.
+    responses:
+      '200':
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                stars:
+                  type: array
+                  items: $ref: '#/components/schemas/Star'
+                from:
+                  type: string
+                  format: date
+                till:
+                  type: string
+                  format: date
+
+  /api/prize/cur/wins:
+    get:
+      description: >
+        Get information about current Weekly Wins and Monthly Medals.
+    responses:
+      '200':
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                wins:
+                  type: array
+                  items: $ref '#/components/schemas/Win'
+                next:
+                  type: string
+                  format: date
+
+  /api/admin/prize/cur/star/{date}/{typ}/{got}:
+    put:
+      description: >
+        Set the value for a Daily Star.
+      parameters:
+        - name: date
+          in: path
+          required: true
+          schema:
+            type: string
+            anyOf:
+              - format: date
+              - pattern: '^today$'
+        - name: typ
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 2
+        - name: got
+          in: path
+          required: true
+          schema:
+            type: string
+            #enum: [got, lost, unset]
+            pattern: '^got|lost|unset$'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+
+  /api/admin/prize/cur/star/{date}/{typ}:
+    post:
+      description: >
+        Create a Daily Star.
+      parameters:
+        - name: date
+          in: path
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: typ
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 2
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+
+    delete:
+      description: >
+        Purge a Daily Star.
+      parameters:
+        - name: date
+          in: path
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: typ
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 2
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+
+  /api/admin/prize/cur/win/{date}/{got}:
+    post:
+      description: >
+        Create the next Weekly Win.
+      parameters:
+        - name: date
+          in: path
+          required: true
+          schema:
+            type: string
+            format: date
+          description: >
+            Only the next Weekly Win can be created, but the date must be given
+            anyway.  The expected date of the next weekly win can be obtained
+            via the `next` field, returned by `/api/prize/cur/wins`.
+        - name: got
+          in: path
+          required: true
+          schema:
+            type: string
+            #enum: [got, lost]
+            pattern: '^got|lost$'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+
+  /api/admin/prize/cur/win/{date}:
+    delete:
+      description: >
+        Delete the last Weekly Win.
+      parameters:
+        - name: date
+          in: path
+          required: true
+          schema:
+            type: string
+            format: date
+          description: >
+            Only the last Weekly Win can be deleted, but the date must be given
+            anyway.
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+
+components:
+  schemas:
+
+    Star:
+      type: object
+      properties:
+        at:
+          type: string
+          format: date
+        typ:
+          type: integer
+          minimum: 0
+          maximum: 4
+        got:
+          type: boolean
+          nullable: true
+
+    Deposit:
+      type: object
+      properties:
+        at:
+          type: string
+          format: date
+        amount:
+          type: integer
+          minimum: 0
+        desc:
+          type: string
+
+    Win:
+      type: object
+      properties:
+        at:
+          type: string
+          format: date
+        got:
+          type: boolean
