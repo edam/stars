@@ -1,8 +1,8 @@
 *~
 .DS_Store
 #*
-starsd/starsd
-stars/stars
+src/starsd
+src/stars
 webapp/node_modules
 webapp/.next
 test.db

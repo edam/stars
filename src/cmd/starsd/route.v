@@ -42,7 +42,7 @@ pub fn (mut app App) route_prize_cur() !vweb.Result {
 }
 
 //[middleware: check_auth]
-['/api/prize/cur/deposits']
+['/api/prize/cur/deposits'; get]
 pub fn (mut app App) route_prize_cur_deposits() !vweb.Result {
 	prize := app.db.get_cur_prize()!
 	deposits := app.db.get_deposits(prize.id)!
