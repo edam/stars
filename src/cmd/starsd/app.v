@@ -27,8 +27,17 @@ pub fn (mut app App) run() {
 	app.args = Args.from_cli_and_conf()
 
 	app.db = match app.args.db.backend {
-		'sqlite' { store.new_sqlite(app.args.db.file or { '' }) or { die('db: ${err}') } }
-		else { die('unsupported database') }
+		'sqlite' {
+			store.new_sqlite(app.args.db.file or { '' }) or { die('db: ${err}') }
+		}
+		'pgsql' {
+			store.new_pgsql(app.args.db.host or { '' }, app.args.db.port or { 0 }, app.args.db.username or {
+				''
+			}, app.args.db.password or { '' }) or { die('db: ${err}') }
+		}
+		else {
+			die('unsupported database')
+		}
 	}
 	defer {
 		app.db.close() or { die('db: ${err}') }

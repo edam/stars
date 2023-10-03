@@ -59,7 +59,7 @@ const options = [
 	ggetopt.opt('db-host', none).arg('HOST', true)
 		.help('database host'),
 	ggetopt.opt('db-port', none).arg('PORT', true)
-		.help('database port'),
+		.help('database port [default]'),
 	ggetopt.opt('db-username', none).arg('USER', true)
 		.help('database username'),
 	ggetopt.opt('db-password', none).arg('PASS', true)
@@ -218,8 +218,11 @@ fn Args.from_cli_and_conf() &Args {
 			}
 		}
 		'pgsql' {
-			if args.db.host == none || args.db.port == none {
-				ggetopt.die('pgsql HOST and PORT required')
+			if args.db.host == none {
+				ggetopt.die('pgsql HOST required')
+			}
+			if args.db.port == none {
+				args.db.port = 5432
 			}
 			if args.db.username == none || args.db.password == none {
 				ggetopt.die('pgsql USER and PASS required')

@@ -7,7 +7,7 @@ struct SqliteDB {
 }
 
 // pub fn SqliteD.new(path string) !&SqliteDB {
-pub fn new_sqlite(path string) !&SqliteDB {
+pub fn new_sqlite(path string) !&Store {
 	db := sqlite.connect(path)!
 	return &SqliteDB{
 		db: db
