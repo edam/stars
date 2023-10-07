@@ -71,7 +71,11 @@ fn menu_stars(mut c Client) ! {
 		menu << MenuItem{title, menu_set_star(star.at, star.typ)}
 	}
 	idx = if idx == -1 { 0 } else { idx }
-	do_menu_sel(mut c, menu, &idx)!
+	if menu.len <= 0 {
+		println('no stars set up!')
+	} else {
+		do_menu_sel(mut c, menu, &idx)!
+	}
 }
 
 fn menu_set_star(date string, typ int) MenuFn {

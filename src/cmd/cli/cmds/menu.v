@@ -53,7 +53,8 @@ fn do_menu_sel_(mut c Client, idx_ &int, menu []MenuItem) !int {
             println(text)
         }
 	}
-	mut idx := (*idx_ + idxs.len) % idxs.len
+    assert idxs.len > 0
+	mut idx :=  (*idx_ + idxs.len) % idxs.len
 
 	mut cur_line := menu.len
 	mut r := readline.Readline{}
