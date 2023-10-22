@@ -10,7 +10,8 @@ fn draw_deposits(res api.ApiDeposits) {
 	mut amounts := ra(res.deposits.map('${it.amount / 100}'))
 	for i, deposit in res.deposits {
 		colour := if i & 1 == 0 { fg(.yellow) } else { fg(.green) }
-		prt(lcr(colour + deposit.desc, '', faint + deposit.at + reset + '    £${amounts[i]}'))
+		desc := deposit.desc#[..50]
+		prt(lcr(colour + desc, '', faint + deposit.at + reset + '    £${amounts[i]}'))
 		prt('')
 	}
 	prt('▔'.repeat(width))

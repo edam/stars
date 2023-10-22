@@ -213,3 +213,21 @@ fn (mut s StoreImpl) delete_win(prize_id u64, at string) ! {
 		delete from Win where prize_id == prize_id && at == at
 	}!
 }
+
+fn (mut s StoreImpl) add_deposit(prize_id u64, at string, amount int, desc string) ! {
+	deposit := Deposit{
+		at: at
+		amount: amount
+		prize_id: prize_id
+		desc: desc
+	}
+	sql s.db {
+		insert deposit into Deposit
+	}!
+}
+
+fn (mut s StoreImpl) update_deposit(deposit_id u64, at string, amount int, desc string) ! {
+	sql s.db {
+		update Deposit set at = at, amount = amount, desc = desc where id == deposit_id
+	}!
+}

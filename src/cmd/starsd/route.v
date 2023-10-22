@@ -5,6 +5,7 @@ import util
 import api
 import rand
 import crypto.sha256
+import encoding.base64
 
 ['/api/auth/:username'; get]
 pub fn (mut app App) route_auth(username string) !vweb.Result {
@@ -250,5 +251,16 @@ pub fn (mut app App) route_delete_admin_prize_cur_win(date string) !vweb.Result 
 	}
 	app.db.delete_star(prize.id, date, 3)!
 	app.db.delete_win(prize.id, date)!
+	return app.json(api.ApiOk{})
+}
+
+[middleware: check_auth_admin]
+['/api/admin/prize/cur/deposit/:date/:amount/:desc'; put]
+pub fn (mut app App) route_put_admin_prize_cur_deposit(date string, amount int, desc string) !vweb.Result {
+	prize := app.db.get_cur_prize()!
+	if util.sdate_check(date)! < prize.start or { '' } || amount < 1 {
+		return app.server_error(400)
+	}
+	app.db.add_deposit(prize.id, date, amount, base64.url_decode(desc).bytestr())!
 	return app.json(api.ApiOk{})
 }

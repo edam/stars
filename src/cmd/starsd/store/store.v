@@ -20,6 +20,8 @@ mut:
 	get_wins(prize_id u64) ![]Win
 	set_win(prize_id u64, at string, got bool) !
 	delete_win(prize_id u64, at string) !
+	add_deposit(prize_id u64, at string, amount int, desc string) !
+	update_deposit(deposit_id u64, at string, amount int, desc string) !
 }
 
 struct StoreImpl {

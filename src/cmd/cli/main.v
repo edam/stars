@@ -23,7 +23,7 @@ fn main() {
 		'admin' {
 			client.admin() or { die(err) }
 		}
-		'deposits' {
+		'deps', 'deposits' {
 			client.deposits() or { die(err) }
 		}
 		'wins', 'medals' {

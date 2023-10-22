@@ -3,6 +3,7 @@ module cmds
 import api
 import term
 import util
+import encoding.base64
 
 const star_types = ['daily', '1st bonus', '2nd bonus', 'monthly bonus']
 
@@ -17,6 +18,7 @@ pub fn (mut c Client) admin() ! {
 			MenuItem{'set star', menu_stars},
 			MenuItem{'weekly win', menu_weekly_win},
 			MenuItem{'setup week stars', menu_setup_week_stars()},
+			MenuItem{'deposits', menu_deposit},
 			MenuItem{'quit', menu_quit},
 		]) or {
 			if err.str() == 'back' || err.str() == 'aborted' {
@@ -119,7 +121,7 @@ fn menu_set_typ_star(typ int) MenuFn {
 fn menu_set_star_date(date &string) MenuFn {
 	return fn [date] (mut c Client) ! {
 		unsafe {
-			*date = do_get_date() or { 'today' }
+			*date = read_date('enter a date: ', *date) or { 'today' }
 		}
 		term.clear_previous_line()
 		return error('back')
@@ -322,4 +324,19 @@ fn menu_setup_week_delete(idx &int, typ int, date string) MenuFn {
 
 fn menu_setup_week_nop(mut c Client) ! {
 	term.clear_previous_line()
+}
+
+fn menu_deposit(mut c Client) ! {
+	do_menu(mut c, [
+		MenuItem{'add deposit', menu_deposit_add},
+		// MenuItem{'delete_deposit', menu_deposit_delete},
+		// MenuItem{'edit_deposit', menu_deposit_edit()},
+	])!
+}
+
+fn menu_deposit_add(mut c Client) ! {
+	date := read_date('when: ', util.sdate_now())!
+	amount := read_int('amount (in pence): ', none)!
+	desc := base64.url_encode_str(read_string('description: ', none)!)
+	c.put[api.ApiOk]('/api/admin/prize/cur/deposit/${date}/${amount}/${desc}')!
 }

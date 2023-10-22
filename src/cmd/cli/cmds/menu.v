@@ -1,7 +1,6 @@
 module cmds
 
 import readline
-import regex
 import term
 
 const date_re = r'^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
@@ -137,18 +136,4 @@ fn do_menu_read_char(r readline.Readline) int {
 		70 { `e`.bytes()[0] }
 		else { 0 }
 	}
-}
-
-fn do_get_date() !string {
-	mut r := readline.Readline{}
-	for {
-		date := r.read_line('date: ') or { return err }
-        if date == '' { return error('empty') }
-		re := regex.regex_opt(cmds.date_re) or { panic(err) }
-		if re.matches_string(date) {
-			return date
-		}
-        term.clear_previous_line()
-	}
-	return ''
 }
