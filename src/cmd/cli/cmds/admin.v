@@ -10,8 +10,8 @@ const star_types = ['daily', '1st bonus', '2nd bonus', 'monthly bonus']
 const dow_names = ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
 pub fn (mut c Client) admin() ! {
-	println(fg(.white) + '𝕊𝕋𝔸ℝ𝕊 𝔸𝔻𝕄𝕀ℕ' + fg(.blue) + ' [${c.user}]' +
-		reset)
+	println(fg(.white) + '𝕊𝕋𝔸ℝ𝕊 𝔸𝔻𝕄𝕀ℕ ' + faint + '- ' + reset +
+		fg(.blue) + '${c.user}@${c.host}' + reset)
 	c.auth()!
 	for {
 		do_menu(mut c, [
@@ -19,11 +19,14 @@ pub fn (mut c Client) admin() ! {
 			MenuItem{'weekly win', menu_weekly_win},
 			MenuItem{'setup week stars', menu_setup_week_stars()},
 			MenuItem{'deposits', menu_deposit},
+			MenuItem{'setup prizes', menu_prizes},
 			MenuItem{'quit', menu_quit},
 		]) or {
 			if err.str() == 'back' || err.str() == 'aborted' {
 				println('bye')
 				return
+			} else if err.str() == 'not found' {
+				println(err.str())
 			} else if err.str() != 'return' {
 				return err
 			}
@@ -339,4 +342,32 @@ fn menu_deposit_add(mut c Client) ! {
 	amount := read_int('amount (in pence): ', none)!
 	desc := base64.url_encode_str(read_string('description: ', none)!)
 	c.put[api.ApiOk]('/api/admin/prize/cur/deposit/${date}/${amount}/${desc}')!
+}
+
+fn menu_prizes(mut c Client) ! {
+	mut menu := []MenuItem{}
+	if res := c.get[api.ApiPrizeCur]('/api/prize/cur') {
+		dow_s := cmds.dow_names[res.first_dow]
+		dow_e := cmds.dow_names[(res.first_dow + 5) % 7 + 1]
+		menu << MenuItem{'Cur prize: £${res.goal / 100:.2} (${res.stars} stars), week is ${dow_s}-${dow_e} since ${res.start}', none}
+		menu << MenuItem{'end', menu_prizes_end}
+	} else {
+		if err.str() != 'not found' {
+			return err
+		} else {
+			menu << MenuItem{'Cur prize: none', none}
+			menu << MenuItem{'add', menu_prizes_add}
+		}
+	}
+	do_menu(mut c, menu)!
+}
+
+fn menu_prizes_add(mut c Client) ! {
+	starts := read_date('starts: ', util.sdate_now())!
+	first_dow := read_opt('first dow: ', '', cmds.dow_names)!
+	goal := read_int('goal (pence): ', none)!
+	star_val := read_int('star_val (pence): ', 200)!
+}
+
+fn menu_prizes_end(mut c Client) ! {
 }

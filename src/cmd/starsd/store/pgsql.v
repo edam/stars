@@ -7,12 +7,13 @@ struct PgsqlDB {
 }
 
 // pub fn PgsqlDB.new(path string) !&PgsqlDB {
-pub fn new_pgsql(host string, port int, username string, password string) !&Store {
+pub fn new_pgsql(host string, port int, username string, password string, dbname string) !&Store {
 	db := pg.connect(pg.Config{
 		host: host
 		port: port
 		user: username
 		password: password
+		dbname: dbname
 	})!
 	return &PgsqlDB{
 		db: db

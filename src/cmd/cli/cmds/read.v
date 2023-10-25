@@ -201,3 +201,13 @@ fn read_int(prompt string, init ?int) !int {
 	}
 	return number.int()
 }
+
+fn read_opt(prompt string, init ?string, opts []string) !string {
+	sel := read_string(prompt, init)!
+	idx := dow_names.index(sel)
+	if idx == -1 {
+		return error('bad selection')
+	} else {
+		return sel
+	}
+}

@@ -64,6 +64,9 @@ fn (mut c Client) fetch[T](uri string, method http.Method) !T {
 		403 {
 			return error('not authorised')
 		}
+		404 {
+			return error('not found')
+		}
 		else {
 			return error('bad response: ${resp.status_code}')
 		}

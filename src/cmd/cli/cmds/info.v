@@ -3,6 +3,7 @@ module cmds
 import time
 import api
 import math
+import util
 
 pub fn (mut c Client) info() ! {
 	sw := time.new_stopwatch()
@@ -87,6 +88,9 @@ fn draw_weekly_stars(this bool, res api.ApiWeek) {
 	mut avail := 0
 	mut sline := '  ' +
 		res.stars.filter(it.typ == 0).map(draw_star(it.got, &total, &avail)).join('  ')
+	mut dline := '  ' + fg(.black) + faint + res.stars.filter(it.typ == 0).map(day_names[util.sdate_to_dow(it.at) or {
+		0
+	}].runes()#[0..2].string()).join('  ')
 	for typ in [1, 2] {
 		bstars := res.stars.filter(it.typ == typ)
 		if bstars.len == 1 {
@@ -104,6 +108,6 @@ fn draw_weekly_stars(this bool, res api.ApiWeek) {
 	prt(info1[0] + '  ${info2[0]}'.repeat(bonus))
 	prt(lcr(info1[1] + '  ${info2[1]}'.repeat(bonus), '', when))
 	prt(lcr(sline, '', fg(.white) + '${total} / ${res.stars.len}' + reset + ' stars'))
-	prt(lcr('', '', fg(.red) + lostinfo))
+	prt(lcr(dline, '', fg(.red) + lostinfo))
 	prt(info1[1] + '  ${info2[1]}'.repeat(bonus))
 }

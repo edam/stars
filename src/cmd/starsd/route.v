@@ -22,7 +22,7 @@ pub fn (mut app App) route_auth(username string) !vweb.Result {
 [middleware: check_auth]
 ['/api/prize/cur'; get]
 pub fn (mut app App) route_prize_cur() !vweb.Result {
-	prize := app.db.get_cur_prize()!
+	prize := app.db.get_cur_prize() or { return check_404(mut app, err)! }
 	count := app.db.get_star_count(prize.id)!
 	deposits := app.db.get_deposits(prize.id)!
 	mut deposits_total := 0
@@ -42,10 +42,10 @@ pub fn (mut app App) route_prize_cur() !vweb.Result {
 	})
 }
 
-//[middleware: check_auth]
+[middleware: check_auth]
 ['/api/prize/cur/deposits'; get]
 pub fn (mut app App) route_prize_cur_deposits() !vweb.Result {
-	prize := app.db.get_cur_prize()!
+	prize := app.db.get_cur_prize() or { return check_404(mut app, err)! }
 	deposits := app.db.get_deposits(prize.id)!
 	return app.json(api.ApiDeposits{
 		deposits: deposits.map(api.Api_Deposit{
@@ -56,34 +56,10 @@ pub fn (mut app App) route_prize_cur_deposits() !vweb.Result {
 	})
 }
 
-//[middleware: check_auth]
-//['/api/prize/cur/week/cur'; get]
-// pub fn (mut app App) route_prize_cur_week_cur() !vweb.Result {
-//	prize := app.db.get_cur_prize()!
-//	date := util.sdate_now()
-//	return app.route_prize_week(prize.id, date)!
-//}
-
-//[middleware: check_auth]
-//['/api/prize/cur/week/last'; get]
-// pub fn (mut app App) route_prize_cur_week_last() !vweb.Result {
-//	prize := app.db.get_cur_prize()!
-//	date := util.sdate_sub(util.sdate_now(), 7)!
-//	return app.route_prize_week(prize.id.str(), date)!
-//}
-
-//[middleware: check_auth]
-//['/api/prize/cur/week/:date'; get]
-// pub fn (mut app App) route_prize_cur_week() !vweb.Result {
-
 [middleware: check_auth]
-['/api/prize/:prize_id/week/:date'; get]
-pub fn (mut app App) route_prize_week(prize_id string, date string) !vweb.Result {
-	prize := match true {
-		prize_id == 'cur' { app.db.get_cur_prize()! }
-		prize_id.u64() > 0 { app.db.get_prize(prize_id.u64())! }
-		else { return app.server_error(400) }
-	}
+['/api/prize/cur/week/:date'; get]
+pub fn (mut app App) route_prize_cur_week(date string) !vweb.Result {
+	prize := app.db.get_cur_prize() or { return check_404(mut app, err)! }
 	at := match true {
 		date == 'cur' { util.sdate_now() }
 		date == 'last' { util.sdate_sub(util.sdate_now(), 7)! }
@@ -107,7 +83,7 @@ pub fn (mut app App) route_prize_week(prize_id string, date string) !vweb.Result
 [middleware: check_auth]
 ['/api/prize/cur/wins/all'; get]
 pub fn (mut app App) route_prize_cur_wins_all() !vweb.Result {
-	prize := app.db.get_cur_prize()!
+	prize := app.db.get_cur_prize() or { return check_404(mut app, err)! }
 	wins := app.db.get_wins(prize.id)!
 	return app.json(api.ApiWins{
 		wins: wins.map(api.Api_Win{
@@ -121,7 +97,7 @@ pub fn (mut app App) route_prize_cur_wins_all() !vweb.Result {
 [middleware: check_auth]
 ['/api/prize/cur/wins'; get]
 pub fn (mut app App) route_prize_cur_wins() !vweb.Result {
-	prize := app.db.get_cur_prize()!
+	prize := app.db.get_cur_prize() or { return check_404(mut app, err)! }
 	wins := app.db.get_wins(prize.id)!
 	mut start := 0
 	mut count := 0
@@ -145,7 +121,7 @@ pub fn (mut app App) route_prize_cur_wins() !vweb.Result {
 [middleware: check_auth_admin]
 ['/api/admin/prize/cur/star/:date/:typ/:got'; put]
 pub fn (mut app App) route_put_admin_prize_cur_star(date string, typ string, got string) !vweb.Result {
-	prize := app.db.get_cur_prize()!
+	prize := app.db.get_cur_prize() or { return check_404(mut app, err)! }
 	typ_ := match typ {
 		'daily', '0' { 0 }
 		'bonus1', '1' { 1 }
@@ -173,7 +149,7 @@ pub fn (mut app App) route_put_admin_prize_cur_star(date string, typ string, got
 [middleware: check_auth_admin]
 ['/api/admin/prize/cur/star/:date/:typ'; post]
 pub fn (mut app App) route_post_admin_prie_cur_star(date string, typ string) !vweb.Result {
-	prize := app.db.get_cur_prize()!
+	prize := app.db.get_cur_prize() or { return check_404(mut app, err)! }
 	util.sdate_check(date) or { return app.server_error(400) }
 	if start := prize.start {
 		if date < start {
@@ -193,7 +169,7 @@ pub fn (mut app App) route_post_admin_prie_cur_star(date string, typ string) !vw
 [middleware: check_auth_admin]
 ['/api/admin/prize/cur/star/:date/:typ'; delete]
 pub fn (mut app App) route_delete_admin_prie_cur_star(date string, typ string) !vweb.Result {
-	prize := app.db.get_cur_prize()!
+	prize := app.db.get_cur_prize() or { return check_404(mut app, err)! }
 	util.sdate_check(date) or { return app.server_error(400) }
 	if start := prize.start {
 		if date < start {
@@ -213,7 +189,7 @@ pub fn (mut app App) route_delete_admin_prie_cur_star(date string, typ string) !
 [middleware: check_auth_admin]
 ['/api/admin/prize/cur/win/:date/:got'; post]
 pub fn (mut app App) route_post_admin_prize_cur_win(date string, got string) !vweb.Result {
-	prize := app.db.get_cur_prize()!
+	prize := app.db.get_cur_prize() or { return check_404(mut app, err)! }
 	wins := app.db.get_wins(prize.id)!
 	next := next_win(wins, prize.start or { '' }, prize.first_dow)!
 	if next != date {
@@ -241,7 +217,7 @@ pub fn (mut app App) route_post_admin_prize_cur_win(date string, got string) !vw
 [middleware: check_auth_admin]
 ['/api/admin/prize/cur/win/:date'; delete]
 pub fn (mut app App) route_delete_admin_prize_cur_win(date string) !vweb.Result {
-	prize := app.db.get_cur_prize()!
+	prize := app.db.get_cur_prize() or { return check_404(mut app, err)! }
 	wins := app.db.get_wins(prize.id)!
 	if wins.len == 0 {
 		return app.server_error(400)

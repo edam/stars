@@ -62,6 +62,13 @@ pub:
 
 // --
 
+pub const (
+	not_found = error('not found')
+	multiple  = error('more than one found')
+)
+
+// --
+
 fn (mut s StoreImpl) create() ! {
 	println('db: creating schema')
 	conf := Conf{
@@ -86,7 +93,7 @@ fn (mut s StoreImpl) get_user(user string) !User {
 	if res.len > 0 {
 		return res[0]
 	} else {
-		return error('user not found')
+		return store.not_found
 	}
 }
 
@@ -96,8 +103,10 @@ fn (mut s StoreImpl) get_cur_prize() !Prize {
 		prizes := sql s.db {
 			select from Prize where start <= today && end is none order by start
 		}!
-		if prizes.len != 1 {
-			return error('no single current prize')
+		if prizes.len == 0 {
+			return store.not_found
+		} else if prizes.len > 1 {
+			return store.multiple
 		}
 		prize := prizes.first()
 		s.cur_prize = prize.id
@@ -115,7 +124,7 @@ fn (mut s StoreImpl) get_prize(prize_id u64) !Prize {
 			prize := prizes.first()
 			s.prizes[prize.id] = prize
 		} else {
-			return error('bad prize_id')
+			return store.not_found
 		}
 	}
 	return s.prizes[prize_id]

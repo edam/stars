@@ -26,6 +26,7 @@ pub mut:
 		port     ?int
 		username ?string
 		password ?string
+		name     ?string
 		file     ?string
 	}
 
@@ -64,6 +65,8 @@ const options = [
 		.help('database username'),
 	ggetopt.opt('db-password', none).arg('PASS', true)
 		.help('database password'),
+	ggetopt.opt('db-name', none).arg('NAME', true)
+		.help('database name'),
 	ggetopt.opt('db-file', none).arg('FILE', true)
 		.help('database file'),
 ]
@@ -137,6 +140,9 @@ fn (mut a Args) process_arg(arg string, val ?string) ! {
 		'db-password' {
 			a.db.password = val or { '' }
 		}
+		'db-name' {
+			a.db.name = val or { '' }
+		}
 		'db-file' {
 			a.db.file = val or { '' }
 		}
@@ -190,6 +196,13 @@ fn (mut a Args) load_conf() ! {
 			}
 			a.db.password = sval
 		}
+		if val := conf.value_opt('db.name') {
+			sval := val.string()
+			if sval == '' {
+				return error('[db.name] empty')
+			}
+			a.db.name = sval
+		}
 		if val := conf.value_opt('db.file') {
 			sval := val.string()
 			if sval == '' {
@@ -223,6 +236,9 @@ fn Args.from_cli_and_conf() &Args {
 			}
 			if args.db.port == none {
 				args.db.port = 5432
+			}
+			if args.db.name == none {
+				ggetopt.die('pgsql NAME required')
 			}
 			if args.db.username == none || args.db.password == none {
 				ggetopt.die('pgsql USER and PASS required')

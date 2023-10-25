@@ -33,7 +33,7 @@ pub fn (mut app App) run() {
 		'pgsql' {
 			store.new_pgsql(app.args.db.host or { '' }, app.args.db.port or { 0 }, app.args.db.username or {
 				''
-			}, app.args.db.password or { '' }) or { die('db: ${err}') }
+			}, app.args.db.password or { '' }, app.args.db.name or { '' }) or { die('db: ${err}') }
 		}
 		else {
 			die('unsupported database')
@@ -84,6 +84,13 @@ fn (mut app App) check_auth_admin() bool {
 
 pub fn (mut app App) not_found() vweb.Result {
 	return app.error_result(404)
+}
+
+fn check_404(mut app App, err IError) !vweb.Result {
+	if err == store.not_found {
+		return app.not_found()
+	}
+	return err
 }
 
 pub fn (mut app App) index() vweb.Result {

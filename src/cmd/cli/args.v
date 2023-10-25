@@ -29,6 +29,10 @@ const options = [
 		.help('hostname to connect to'),
 	ggetopt.opt('port', `p`).arg('PORT', true)
 		.help('port to connect to (${default_port})'),
+	ggetopt.opt('username', none).arg('USER', true)
+		.help('username to authenticate with'),
+	ggetopt.opt('password', none).arg('PASS', true)
+		.help('password for authentication. For security, it is not recommended that you pass password on the commandline.'),
 	ggetopt.opt_help(),
 	ggetopt.text(''),
 	ggetopt.text('Commands:'),
@@ -62,6 +66,12 @@ fn (mut a Args) process_arg(arg string, val ?string) ! {
 			if a.port <= 1024 {
 				return error('--port: port must be > 1024')
 			}
+		}
+		'username' {
+			a.user = val or { '' }
+		}
+		'password' {
+			a.psk = val or { '' }
 		}
 		else {}
 	}
@@ -106,6 +116,9 @@ fn Args.from_cli_and_conf() &Args {
 	}
 	if args.host == '' {
 		ggetopt.die('please specify a hostname')
+	}
+	if args.user == '' || args.psk == '' {
+		ggetopt.die('please specify USER ')
 	}
 	return args
 }
