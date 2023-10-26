@@ -7,7 +7,7 @@ starsd: $(STARSD)
 
 stars: $(STARS)
 
-$(STARSD):
+$(STARSD) $(STARS):
 	make -C src starsd
 
 $(STARS):
@@ -17,7 +17,7 @@ build: $(STARSD)
 	docker build -f ci/Dockerfile -t stars .
 
 dev-starsd:
-	cd src && v -d trace_orm -d trace_vweb -d vweb_livereload watch run cmd/starsd --db-file=testy.db
+	cd src && v -d trace_orm -d trace_vweb -d vweb_livereload watch run cmd/starsd --db-file=test.db
 
 dev-webapp:
 	cd webapp && npm run dev

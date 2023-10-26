@@ -69,14 +69,15 @@ fn draw_star(got ?bool, total &int, avail &int) string {
 
 fn draw_weekly_stars(this bool, res api.ApiWeek) {
 	mut regular := 0
-	mut bonus := 0
+	mut bonus := []int{}
 	for star in res.stars {
 		if star.typ == 0 {
 			regular++
 		} else {
-			bonus++
+			bonus << star.typ
 		}
 	}
+	bonus.sort(a < b)
 
 	week := if this { 'ᴛʜɪꜱ ᴡᴇᴇᴋ' } else { 'ʟᴀꜱᴛ ᴡᴇᴇᴋ' }
 	nweek := math.max(9, 2 + 4 * regular)
@@ -91,7 +92,7 @@ fn draw_weekly_stars(this bool, res api.ApiWeek) {
 	mut dline := '  ' + fg(.black) + faint + res.stars.filter(it.typ == 0).map(day_names[util.sdate_to_dow(it.at) or {
 		0
 	}].runes()#[0..2].string()).join('  ')
-	for typ in [1, 2] {
+	for typ in bonus {
 		bstars := res.stars.filter(it.typ == typ)
 		if bstars.len == 1 {
 			sline += '      ' + draw_star(bstars[0].got, &total, &avail)
@@ -105,9 +106,9 @@ fn draw_weekly_stars(this bool, res api.ApiWeek) {
 	lostinfo := if lost > 0 { 'lost ${res.stars.len - total - avail} :(' } else { '' }
 
 	prt('')
-	prt(info1[0] + '  ${info2[0]}'.repeat(bonus))
-	prt(lcr(info1[1] + '  ${info2[1]}'.repeat(bonus), '', when))
+	prt(info1[0] + '  ${info2[0]}'.repeat(bonus.len))
+	prt(lcr(info1[1] + '  ${info2[1]}'.repeat(bonus.len), '', when))
 	prt(lcr(sline, '', fg(.white) + '${total} / ${res.stars.len}' + reset + ' stars'))
 	prt(lcr(dline, '', fg(.red) + lostinfo))
-	prt(info1[1] + '  ${info2[1]}'.repeat(bonus))
+	prt(info1[1] + '  ${info2[1]}'.repeat(bonus.len))
 }

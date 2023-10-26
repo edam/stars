@@ -139,7 +139,7 @@ fn (mut s StoreImpl) get_star_count(prize_id u64) !int {
 
 fn (mut s StoreImpl) get_stars(prize_id u64, from string, till string) ![]Star {
 	stars := sql s.db {
-		select from Star where prize_id == prize_id && at >= from && at <= till order by at
+		select from Star where prize_id == prize_id && typ >= 0 && at >= from && at <= till order by at
 	}!
 	return stars.sorted_with_compare(fn (a &Star, b &Star) int {
 		return if a.typ == b.typ {
