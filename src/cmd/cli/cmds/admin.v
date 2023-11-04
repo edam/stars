@@ -4,10 +4,13 @@ import api
 import term
 import util
 import encoding.base64
+import inp
 
 const dow_names = ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
 pub fn (mut c Client) admin() ! {
+	// bob := inp.read_int('foo: ', 7)!
+	// println('[${bob}]')
 	println(fg(.white) + '𝕊𝕋𝔸ℝ𝕊 𝔸𝔻𝕄𝕀ℕ ' + faint + '- ' + reset +
 		fg(.blue) + '${c.user}@${c.host}' + reset)
 	c.auth()!
@@ -123,7 +126,7 @@ fn menu_set_typ_star(typ int) MenuFn {
 fn menu_set_star_date(date &string) MenuFn {
 	return fn [date] (mut c Client) ! {
 		unsafe {
-			*date = read_date('enter a date: ', *date) or { 'today' }
+			*date = inp.read_date('enter a date: ', *date) or { 'today' }
 		}
 		term.clear_previous_line()
 		return error('back')
@@ -340,7 +343,7 @@ fn menu_setup_week_delete(idx &int, typ int, date string) MenuFn {
 fn menu_setup_week_bonus_stars(date string, num_bonus int) MenuFn {
 	return fn [date, num_bonus] (mut c Client) ! {
 		suggested := if num_bonus == 0 { 2 } else { num_bonus }
-		num := read_int('num bonus stars: ', suggested)!
+		num := inp.read_int('num bonus stars: ', suggested)!
 		if num < num_bonus {
 			for typ := num_bonus; typ > num; typ-- {
 				c.delete[api.ApiOk]('/api/admin/prize/cur/star/${date}/${typ}')!
@@ -366,9 +369,9 @@ fn menu_deposit(mut c Client) ! {
 }
 
 fn menu_deposit_add(mut c Client) ! {
-	date := read_date('when: ', util.sdate_now())!
-	amount := read_int('amount (in pence): ', none)!
-	desc := base64.url_encode_str(read_string('description: ', none)!)
+	date := inp.read_date('when: ', util.sdate_now())!
+	amount := inp.read_int('amount (in pence): ', none)!
+	desc := base64.url_encode_str(inp.read_string('description: ', none)!)
 	c.put[api.ApiOk]('/api/admin/prize/cur/deposit/${date}/${amount}/${desc}')!
 }
 
@@ -391,10 +394,10 @@ fn menu_prizes(mut c Client) ! {
 }
 
 fn menu_prizes_add(mut c Client) ! {
-	starts := read_date('starts: ', util.sdate_now())!
-	first_dow := read_opt('first dow: ', '', cmds.dow_names)!
-	goal := read_int('goal (pence): ', none)!
-	star_val := read_int('star_val (pence): ', 200)!
+	starts := inp.read_date('starts: ', util.sdate_now())!
+	first_dow := inp.read_opt('first dow: ', '', cmds.dow_names)!
+	goal := inp.read_int('goal (pence): ', none)!
+	star_val := inp.read_int('star_val (pence): ', 200)!
 }
 
 fn menu_prizes_end(mut c Client) ! {
