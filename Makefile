@@ -7,11 +7,10 @@ starsd: $(STARSD)
 
 stars: $(STARS)
 
-$(STARSD) $(STARS):
-	make -C src starsd
+.PHONY: phony
 
-$(STARS):
-	make -C src stars
+$(STARSD) $(STARS): phony
+	make -C src $(notdir $@)
 
 build: $(STARSD)
 	docker build -f ci/Dockerfile -t stars .
