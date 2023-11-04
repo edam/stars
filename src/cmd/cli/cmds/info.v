@@ -45,7 +45,7 @@ fn draw_grand_prize(res api.ApiPrizeCur) {
 	start := time.parse('${res.start} 00:00:00') or { time.now() }
 	so_far := time.now() - start
 	est_days := so_far.days() * (f64(remaining) / f64(res.got.stars))
-	est_end := start.add_days(int(est_days))
+	est_end := time.now().add_days(int(est_days))
 	eta := '${est_end.day} ${month_names[est_end.month]}'
 
 	prt(lcr(fg(.yellow) + '${info1[0]} = £${info2[0]}' + reset, '', 'total ' + fg(.white) +
