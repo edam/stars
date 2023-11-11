@@ -4,17 +4,27 @@ import readline
 import term
 import encoding.utf8.east_asian
 import math
+import strings
+import arrays
 
 pub struct Input {
 pub:
-	prompt          ?string
-	bind            map[InputActionOp]InputBindFn
-	max_width       int = -1
-	is_word_rune_fn InputIsWordRuneFn = is_word_rune
-	blank           rune = ` `
-	emit_newline    bool = true
+	// blanking string (must display 1 terminal character wide)
+	blank string = ' '
+	// display width limit
+	width int = int(math.max_i32)
 pub mut:
+	// validation function
+	validate_fn ?InputValidateFn
+	// when user hits enter, emit newline
+	emit_newline bool = true
+	// function used to determine word endings
+	is_word_rune_fn InputIsWordRuneFn = is_word_rune
+	// bind map, of actions to handler functions, overriding default behaviour
+	bind map[InputActionOp]InputBindFn
+	// current value
 	val []rune
+	// current cursor position
 	cur int = -1
 }
 
@@ -42,36 +52,56 @@ pub enum InputActionOp {
 	tab
 	s_tab
 	enter
+	l_limit
+	r_limit
 }
 
-type InputBindFn = fn (mut Input, InputAction)
+type InputBindFn = fn (mut Input, InputAction) !
 
 type InputIsWordRuneFn = fn (Input, rune) bool
 
+type InputValidateFn = fn (mut Input) !
+
+// no operation, which can be used in bind map
 pub fn nop(mut _ Input, _ InputActionOp, _ string) {
 }
 
+// get display width of runes (some runes are 2 terminal chars wide)
 pub fn width(runes []rune) int {
 	return east_asian.display_width(runes.string(), 2)
 }
 
-pub fn (mut i Input) insert(runes []rune) {
-	if i.max_width < 0 || width(i.val) + width(runes) <= i.max_width {
-		print(runes.string())
+// get the display width of the current value
+pub fn (mut i Input) val_width() int {
+	return width(i.val)
+}
+
+// insert a rune at cursor position in current value
+pub fn (mut i Input) insert(ch rune) {
+	if i.width < 0 || width(i.val) + width([ch]) <= i.width {
+		print(ch)
 		rem := i.val[i.cur..]
 		rem_w := width(rem)
 		if rem_w > 0 {
 			print(rem.string())
 			term.cursor_back(rem_w)
 		}
-		i.val.insert(i.cur, runes)
-		// i.val = i.val[0..i.cur] + ch + i.val[i.cur..]
-		i.cur += runes.len
+		i.val = arrays.flatten([i.val#[..i.cur], [ch], i.val#[i.cur..]])
+		i.cur++
 	}
 }
 
-pub fn (mut i Input) move(pos int) {
-	if pos >= 0 && pos <= width(i.val) {
+// set cursor position, taking into account any format, and update terminal
+pub fn (mut i Input) move(pos int) ! {
+	if pos < 0 {
+		if f := i.bind[.l_limit] {
+			f(mut i, InputAction{.l_limit, none})!
+		}
+	} else if pos > width(i.val) {
+		if f := i.bind[.r_limit] {
+			f(mut i, InputAction{.r_limit, none})!
+		}
+	} else {
 		if pos > i.cur {
 			term.cursor_forward(width(i.val[i.cur..pos]))
 		} else if pos < i.cur {
@@ -81,35 +111,37 @@ pub fn (mut i Input) move(pos int) {
 	}
 }
 
+// delete n chars at cursor
 pub fn (mut i Input) del(n int) {
 	n_ := math.max(0, math.min(n, i.val.len - i.cur))
 	if n_ > 0 {
 		rem := i.val[i.cur + n_..]
 		cut_w := width(i.val[i.cur..i.cur + n_])
-		print(rem.string() + i.blank.repeat(cut_w))
+		print(rem.string() + strings.repeat_string(i.blank, cut_w))
 		term.cursor_back(cut_w + width(rem))
-		// i.val = i.val[0..i.cur] + rem
 		i.val.delete_many(i.cur, n_)
 	}
 }
 
+// backspace n chars at cursor
 pub fn (mut i Input) bs(n int) {
 	n_ := math.max(0, math.min(n, i.cur))
 	if n_ > 0 {
 		term.cursor_back(n_)
 		rem := i.val[i.cur..]
-		print(rem.string() + i.blank.repeat(n_))
+		print(rem.string() + strings.repeat_string(i.blank, n_))
 		term.cursor_back(n_ + width(rem))
-		// i.val = i.val[0..i.cur - n_] + rem
 		i.cur -= n_
 		i.val.delete_many(i.cur, n_)
 	}
 }
 
+// default function to determine word starts/ends
 fn is_word_rune(_ Input, ch rune) bool {
 	return ch !in [` `, `\t`, `\r`, `\n`, `.`, `:`, `,`, `;`, `<`, `>`, `?`, `!`]
 }
 
+// get pos of next word start, based on current is_word_rune_fn
 pub fn (mut i Input) next_word_start_pos() int {
 	mut in_word := false
 	mut pos := i.cur
@@ -123,6 +155,7 @@ pub fn (mut i Input) next_word_start_pos() int {
 	return pos
 }
 
+// get pos of next word end, based on current is_word_rune_fn
 pub fn (mut i Input) next_word_end_pos() int {
 	w := width(i.val)
 	mut was_in_word := false
@@ -137,6 +170,34 @@ pub fn (mut i Input) next_word_end_pos() int {
 	return pos
 }
 
+// validate the input
+pub fn (mut i Input) validate() ! {
+	old_val := i.val.clone()
+	old_cur := i.cur
+	if validate_fn := i.validate_fn {
+		validate_fn(mut i)!
+	}
+	if i.val != old_val {
+		move := width(old_val#[..old_cur])
+		if move > 0 {
+			term.cursor_back(move)
+		}
+		print(i.val.string())
+		old_w := width(old_val)
+		val_w := width(i.val)
+		if old_w > val_w {
+			print(i.blank.repeat(old_w - val_w))
+			term.cursor_back(old_w)
+		} else {
+			term.cursor_back(val_w)
+		}
+		if i.cur > 0 {
+			term.cursor_forward(width(i.val#[..i.cur]))
+		}
+	}
+}
+
+// read input
 pub fn (mut i Input) read() !string {
 	mut r := readline.Readline{}
 	r.enable_raw_mode_nosig()
@@ -144,37 +205,42 @@ pub fn (mut i Input) read() !string {
 		r.disable_raw_mode()
 	}
 
-	if prompt := i.prompt {
-		print(prompt)
-	}
 	print(i.val.string())
-	if i.emit_newline {
-		defer {
+	defer {
+		if i.emit_newline {
 			println('')
+		} else {
+			w := width(i.val#[..i.cur])
+			//			println('-${w}-')
+			if w > 0 {
+				term.cursor_back(w)
+			}
 		}
 	}
-
+	val_w := width(i.val)
 	if i.cur < 0 {
-		i.cur = width(i.val)
+		i.cur = val_w
+	} else if i.cur < val_w {
+		term.cursor_back(val_w - i.cur)
 	}
 
 	for {
 		action := get_read_char(r)!
 		if f := i.bind[action.op] {
-			f(mut i, action)
+			f(mut i, action)!
 		} else {
 			match action.op {
 				// defaults
-				.insert { i.insert([action.ch or { ` ` }]) }
-				.left { i.move(i.cur - 1) }
-				.right { i.move(i.cur + 1) }
-				.home { i.move(0) }
-				.end { i.move(width(i.val)) }
+				.insert { i.insert(action.ch or { ` ` }) }
+				.left { i.move(i.cur - 1)! }
+				.right { i.move(i.cur + 1)! }
+				.home { i.move(0)! }
+				.end { i.move(width(i.val))! }
 				.del { i.del(1) }
 				.bs { i.bs(1) }
 				.kill { i.del(i.val.len - i.cur) }
-				.m_left { i.move(i.next_word_start_pos()) }
-				.m_right { i.move(i.next_word_end_pos()) }
+				.m_left { i.move(i.next_word_start_pos())! }
+				.m_right { i.move(i.next_word_end_pos())! }
 				.m_del { i.del(i.next_word_end_pos() - i.cur) }
 				.m_bs { i.bs(i.cur - i.next_word_start_pos()) }
 				.enter { break }
@@ -182,6 +248,7 @@ pub fn (mut i Input) read() !string {
 			}
 		}
 	}
+	i.validate()!
 	return i.val.string()
 }
 
