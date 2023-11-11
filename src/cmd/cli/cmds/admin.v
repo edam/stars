@@ -9,8 +9,6 @@ import inp
 const dow_names = ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
 pub fn (mut c Client) admin() ! {
-	// bob := inp.read_int('foo: ', 7)!
-	// println('[${bob}]')
 	println(fg(.white) + '𝕊𝕋𝔸ℝ𝕊 𝔸𝔻𝕄𝕀ℕ ' + faint + '- ' + reset +
 		fg(.blue) + '${c.user}@${c.host}' + reset)
 	c.auth()!
