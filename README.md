@@ -9,8 +9,7 @@ It has:
 
 Screenshots
 -----------
-
-<img width="659" alt="Screenshot 2023-10-22 at 7 37 08 pm" src="https://github.com/edam/stars/assets/3274122/fa921b0c-63bc-411a-a0bb-40a93cb140e8">
+<img width="684" alt="screenshot" src="https://github.com/edam/stars/assets/3274122/7e76ddcb-57ff-4edb-8786-70a58c7f2e78">
 
 Install/Run
 -----------
