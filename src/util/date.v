@@ -6,6 +6,18 @@ import time
 // references
 // https://artofmemory.com/blog/how-to-calculate-the-day-of-the-week/
 
+// get day ordinal in english
+pub fn ordinal(n int) string {
+	return match true {
+		n < 1 { 'th' }
+		n % 100 in [11, 12, 13] { 'th' }
+		n % 10 == 1 { 'st' }
+		n % 10 == 2 { 'nd' }
+		n % 10 == 3 { 'rd' }
+		else { 'th' }
+	}
+}
+
 // is julian date?
 pub fn is_julian(y int, m int, d int) bool {
 	return y < 1752 || (y == 1752 && (m < 9 || (m == 9 && d < 14)))
@@ -27,10 +39,9 @@ pub fn month_days(y int, m int) !int {
 	return if m == 2 && is_leap_year(y) { 29 } else { util.dim[m - 1] }
 }
 
-const (
-	madj = [0, 3, 3, 6, 1, 4, 6, 2, 5, 0, 3, 5] // month adjust
-	cadj = [4, 2, 0, 6, 4, 2, 0] // century adjust (1700-2399)
-)
+const madj = [0, 3, 3, 6, 1, 4, 6, 2, 5, 0, 3, 5] // month adjust
+
+const cadj = [4, 2, 0, 6, 4, 2, 0] // century adjust (1700-2399)
 
 // calc day of week from date
 pub fn date_to_dow(y int, m int, d int) !int {
@@ -69,7 +80,7 @@ pub fn date_add(y int, m int, d int, days int) !(int, int, int) {
 	}
 }
 
-[inline]
+@[inline]
 pub fn date_sub(y int, m int, d int, days int) !(int, int, int) {
 	return date_add(y, m, d, -days)!
 }
@@ -125,7 +136,7 @@ pub fn sdate_add(date string, days int) !string {
 }
 
 // subtract a few days to an sdate
-[inline]
+@[inline]
 pub fn sdate_sub(date string, days int) !string {
 	return sdate_add(date, -days)!
 }

@@ -1,21 +1,19 @@
 import edam.ggetopt
 import os
 import toml
+import defaults
 
-const (
-	db_regex              = r'^([a-z]+)://(?:([^:@/]+)(?::([^@]+))?@)?([-a-z.]+)(?::([0-9]+))?(?:/([-a-z.]+)?)?$'
-	db_backends           = ['sqlite', 'pgsql']
-	days_of_week          = ['', 'mo', 'tu', 'we', 'th', 'fr', 'sa', 'su']
+const db_regex = r'^([a-z]+)://(?:([^:@/]+)(?::([^@]+))?@)?([-a-z.]+)(?::([0-9]+))?(?:/([-a-z.]+)?)?$'
+const db_backends = ['sqlite', 'pgsql']
+const days_of_week = ['', 'mo', 'tu', 'we', 'th', 'fr', 'sa', 'su']
 
-	default_conf          = '~/.starsrc'
-	default_port          = 8070
-	default_session_ttl   = 60
-	default_db_kind       = 'sqlite'
-	default_first_dow     = 1
-	default_first_dow_str = 'Monday'
-)
+const default_conf = '~/.starsrc'
+const default_port = 8070
+const default_db_kind = 'sqlite'
+const default_first_dow = 1
+const default_first_dow_str = 'Monday'
 
-[heap]
+@[heap]
 pub struct Args {
 pub mut:
 	conf string = default_conf
@@ -31,8 +29,9 @@ pub mut:
 	}
 
 	create      bool
+	reset_admin bool
 	port        int = default_port
-	session_ttl int = default_session_ttl
+	session_ttl int = defaults.session_ttl
 	first_dow   int = default_first_dow
 }
 
@@ -46,10 +45,12 @@ const options = [
 		.help('sqlite database file'),
 	ggetopt.opt('create', none)
 		.help('create database schema'),
+	ggetopt.opt('reset-admin', none)
+		.help('reset admin user/password (also done with --create)'),
 	ggetopt.opt('port', `p`).arg('PORT', true)
 		.help('listening port [${default_port}]'),
 	ggetopt.opt('session-ttl', none).arg('S', true)
-		.help('auth sessions TTL [${default_session_ttl}]'),
+		.help('auth sessions TTL [${defaults.session_ttl}]'),
 	ggetopt.opt_help(),
 	ggetopt.text(''),
 	ggetopt.text('Database options:'),
@@ -88,6 +89,9 @@ fn (mut a Args) process_arg(arg string, val ?string) ! {
 	match arg {
 		'create' {
 			a.create = true
+		}
+		'reset-admin' {
+			a.reset_admin = true
 		}
 		'port', 'p' {
 			a.port = val or { '' }.int()

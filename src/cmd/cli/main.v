@@ -10,7 +10,7 @@ fn main() {
 		host: args.host
 		port: args.port
 		user: args.user
-		psk: args.psk
+		pw: args.pw
 	}
 
 	match args.cmd or { '' } {

@@ -12,3 +12,12 @@ fn next_win(wins []store.Win, prize_start string, first_dow int) !string {
 		return util.sdate_add(prize_start, diff_dow)!
 	}
 }
+
+fn (mut app App) latest_star_at() !string {
+	prize := app.db.get_cur_prize()!
+	if star := app.db.get_last_star(prize.id, 0) {
+		return star.at
+	} else {
+		return prize.start or { '' }
+	}
+}

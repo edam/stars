@@ -1,11 +1,9 @@
 import db.sqlite
 import time
 
-const (
-	cleanup_expired_every = 1 * time.hour
-)
+const cleanup_expired_every = 1 * time.hour
 
-[heap]
+@[heap]
 struct Sessions {
 	db     sqlite.DB
 	cancel chan bool
@@ -43,14 +41,12 @@ fn (mut s Sessions) close() {
 
 // --
 
-const (
-	perm_admin = 1
-)
+const perm_admin = 1
 
-[table: sessions]
+@[table: sessions]
 struct Session {
 pub:
-	id      string    [primary]
+	id      string    @[primary]
 	user_id u64
 	at      time.Time
 	perms   u32

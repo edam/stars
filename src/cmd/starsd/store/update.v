@@ -1,6 +1,8 @@
 module store
 
-fn (mut s StoreImpl) update() ! {
+import crypto.sha256
+
+fn (mut s StoreImpl) verify() ! {
 	println('db: checking schema')
 	conf := sql s.db {
 		select from Conf where key == 'version'
@@ -29,4 +31,20 @@ fn (mut s StoreImpl) update() ! {
 }
 
 fn (mut s StoreImpl) upgrade(version int) ! {
+	match version {
+		2 { s.upgrade_2()! }
+		else { return error('unknown version: ${version}') }
+	}
+}
+
+fn (mut s StoreImpl) upgrade_2() ! {
+	users := sql s.db {
+		select from User
+	}!
+	for user in users {
+		psk := sha256.hexhash(user.psk)
+		sql s.db {
+			update User set psk = psk where id == user.id
+		}!
+	}
 }

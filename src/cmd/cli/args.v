@@ -2,12 +2,10 @@ import edam.ggetopt
 import os
 import toml
 
-const (
-	default_conf = '~/.starsrc'
-	default_port = 8070
-)
+const default_conf = '~/.starsrc'
+const default_port = 8070
 
-[heap]
+@[heap]
 pub struct Args {
 pub mut:
 	cmd      ?string
@@ -16,7 +14,7 @@ pub mut:
 	host     string
 	port     int = default_port
 	user     string
-	psk      string
+	pw       string
 }
 
 const options = [
@@ -71,7 +69,7 @@ fn (mut a Args) process_arg(arg string, val ?string) ! {
 			a.user = val or { '' }
 		}
 		'password' {
-			a.psk = val or { '' }
+			a.pw = val or { '' }
 		}
 		else {}
 	}
@@ -95,7 +93,7 @@ fn (mut a Args) load_conf() ! {
 			a.user = val.string()
 		}
 		if val := conf.value_opt('client.password') {
-			a.psk = val.string()
+			a.pw = val.string()
 		}
 	}
 }
@@ -117,8 +115,8 @@ fn Args.from_cli_and_conf() &Args {
 	if args.host == '' {
 		ggetopt.die('please specify a hostname')
 	}
-	if args.user == '' || args.psk == '' {
-		ggetopt.die('please specify USER ')
+	if args.user == '' || args.pw == '' {
+		ggetopt.die('please specify USER and PASS')
 	}
 	return args
 }

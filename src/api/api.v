@@ -59,3 +59,19 @@ pub:
 	wins []Api_Win
 	next string
 }
+
+pub struct ApiUsers {
+pub:
+	users []Api_User
+}
+
+pub struct Api_User {
+pub:
+	name  string
+	perms Api_UserPerms
+}
+
+pub struct Api_UserPerms {
+pub:
+	admin bool
+}

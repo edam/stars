@@ -5,22 +5,34 @@ import json
 import api
 import crypto.sha256
 import edam.ggetopt { die }
+import time
+import defaults
 
 pub struct Client {
 	host string
 	port int
 	user string
-	psk  string
+	pw   string
 mut:
 	session_id ?string
 }
 
 fn (mut c Client) auth() ! {
-	if c.user == '' || c.psk == '' {
+	if c.user == '' || c.pw == '' {
 		die('username and pre-shared key required')
 	}
 	resp := c.get[api.ApiAuth]('/api/auth/${c.user}')!
-	c.session_id = sha256.hexhash('${c.psk}:${resp.challenge}')
+	psk := sha256.hexhash(c.pw)
+	c.session_id = sha256.hexhash('${psk}:${resp.challenge}')
+}
+
+fn (mut c Client) keep_alive() {
+	go fn [mut c] () {
+		for {
+			time.sleep(time.second * (defaults.session_ttl - 5))
+			c.get[api.ApiOk]('/api/ping') or { break }
+		}
+	}()
 }
 
 fn (mut c Client) get[T](uri string) !T {
@@ -45,30 +57,32 @@ fn (mut c Client) fetch[T](uri string, method http.Method) !T {
 		cookies['session'] = session_id
 	}
 	url := 'http://${c.host}:${c.port}${uri}'
-	$if trace_stars ? {
-		verb := method.str().to_upper()
-		eprintln('${verb} ${url}')
-	}
-	resp := http.fetch(
-		method: method
-		url: url
-		cookies: cookies
-	)!
-	match resp.status_code {
-		200 {
-			$if trace_stars ? {
-				eprintln(resp.body)
+	lock {
+		$if trace_stars ? {
+			verb := method.str().to_upper()
+			eprintln('${verb} ${url}')
+		}
+		resp := http.fetch(
+			method: method
+			url: url
+			cookies: cookies
+		)!
+		match resp.status_code {
+			200 {
+				$if trace_stars ? {
+					eprintln(resp.body)
+				}
+				return json.decode(T, resp.body)!
 			}
-			return json.decode(T, resp.body)!
-		}
-		403 {
-			return error('not authorised')
-		}
-		404 {
-			return error('not found')
-		}
-		else {
-			return error('bad response: ${resp.status_code}')
+			403 {
+				return error('not authorised')
+			}
+			404 {
+				return error('not found')
+			}
+			else {
+				return error('bad response: ${resp.status_code}')
+			}
 		}
 	}
 }

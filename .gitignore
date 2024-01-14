@@ -4,9 +4,10 @@
 src/starsd
 src/stars
 src/cmd/starsd/starsd
+src/cmd/cli/cli
 webapp/node_modules
 webapp/.next
-test.db
+src/*.db
 GPATH
 GRTAGS
 GTAGS
