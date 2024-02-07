@@ -31,10 +31,10 @@ pub fn (mut app App) route_ping(mut ctx Context) vweb.Result {
 
 @['/api/prize/cur'; get]
 pub fn (mut app App) route_prize_cur(mut ctx Context) vweb.Result {
-	return app.real_route_prize_cur(mut ctx) or { return ctx.server_error('') }
+	return app.real_prize_cur(mut ctx) or { return ctx.server_error('') }
 }
 
-fn (mut app App) real_route_prize_cur(mut ctx Context) !vweb.Result {
+fn (mut app App) real_prize_cur(mut ctx Context) !vweb.Result {
 	prize := app.db.get_cur_prize() or { return check_404(mut ctx, err)! }
 	count := app.db.get_star_count(prize.id)!
 	deposits := app.db.get_deposits(prize.id)!
@@ -57,10 +57,10 @@ fn (mut app App) real_route_prize_cur(mut ctx Context) !vweb.Result {
 
 @['/api/prize/cur/deposits'; get]
 pub fn (mut app App) route_prize_cur_deposits(mut ctx Context) vweb.Result {
-	return app.real_route_prize_cur_deposits(mut ctx) or { return ctx.server_error('') }
+	return app.real_prize_cur_deposits(mut ctx) or { return ctx.server_error('') }
 }
 
-fn (mut app App) real_route_prize_cur_deposits(mut ctx Context) !vweb.Result {
+fn (mut app App) real_prize_cur_deposits(mut ctx Context) !vweb.Result {
 	prize := app.db.get_cur_prize() or { return check_404(mut ctx, err)! }
 	deposits := app.db.get_deposits(prize.id)!
 	return ctx.json(api.ApiDeposits{
@@ -74,10 +74,10 @@ fn (mut app App) real_route_prize_cur_deposits(mut ctx Context) !vweb.Result {
 
 @['/api/prize/cur/week/:date'; get]
 pub fn (mut app App) route_prize_cur_week(mut ctx Context, date string) vweb.Result {
-	return app.real_route_prize_cur_week(mut ctx, date) or { return ctx.server_error('') }
+	return app.real_prize_cur_week(mut ctx, date) or { return ctx.server_error('') }
 }
 
-fn (mut app App) real_route_prize_cur_week(mut ctx Context, date string) !vweb.Result {
+fn (mut app App) real_prize_cur_week(mut ctx Context, date string) !vweb.Result {
 	prize := app.db.get_cur_prize() or { return check_404(mut ctx, err)! }
 	at := match true {
 		date == 'cur' { util.sdate_now() }
@@ -102,10 +102,10 @@ fn (mut app App) real_route_prize_cur_week(mut ctx Context, date string) !vweb.R
 
 @['/api/prize/cur/wins/all'; get]
 pub fn (mut app App) route_prize_cur_wins_all(mut ctx Context) vweb.Result {
-	return app.real_route_prize_cur_wins_all(mut ctx) or { return ctx.server_error('') }
+	return app.real_prize_cur_wins_all(mut ctx) or { return ctx.server_error('') }
 }
 
-fn (mut app App) real_route_prize_cur_wins_all(mut ctx Context) !vweb.Result {
+fn (mut app App) real_prize_cur_wins_all(mut ctx Context) !vweb.Result {
 	prize := app.db.get_cur_prize() or { return check_404(mut ctx, err)! }
 	wins := app.db.get_wins(prize.id)!
 	return ctx.json(api.ApiWins{
@@ -119,10 +119,10 @@ fn (mut app App) real_route_prize_cur_wins_all(mut ctx Context) !vweb.Result {
 
 @['/api/prize/cur/wins'; get]
 pub fn (mut app App) route_prize_cur_wins(mut ctx Context) vweb.Result {
-	return app.real_route_prize_cur_wins(mut ctx) or { return ctx.server_error('') }
+	return app.real_prize_cur_wins(mut ctx) or { return ctx.server_error('') }
 }
 
-fn (mut app App) real_route_prize_cur_wins(mut ctx Context) !vweb.Result {
+fn (mut app App) real_prize_cur_wins(mut ctx Context) !vweb.Result {
 	prize := app.db.get_cur_prize() or { return check_404(mut ctx, err)! }
 	wins := app.db.get_wins(prize.id)!
 	mut start := 0
@@ -144,14 +144,25 @@ fn (mut app App) real_route_prize_cur_wins(mut ctx Context) !vweb.Result {
 	})
 }
 
+@['/api/admin/prize/cur'; delete]
+pub fn (mut app App) route_delete_admin_prize_cur(mut ctx Context) vweb.Result {
+	return app.real_delete_admin_prize_cur(mut ctx) or { return ctx.server_error('') }
+}
+
+fn (mut app App) real_delete_admin_prize_cur(mut ctx Context) !vweb.Result {
+	prize := app.db.get_cur_prize() or { return check_404(mut ctx, err)! }
+	app.db.end_prize(prize.id)!
+	return ctx.json(api.ApiOk{})
+}
+
 @['/api/admin/prize/cur/star/:date/:typ/:got'; put]
 pub fn (mut app App) route_put_admin_prize_cur_star(mut ctx Context, date string, typ int, got string) vweb.Result {
-	return app.real_route_put_admin_prize_cur_star(mut ctx, date, typ, got) or {
+	return app.real_put_admin_prize_cur_star(mut ctx, date, typ, got) or {
 		return ctx.server_error('')
 	}
 }
 
-fn (mut app App) real_route_put_admin_prize_cur_star(mut ctx Context, date string, typ int, got string) !vweb.Result {
+fn (mut app App) real_put_admin_prize_cur_star(mut ctx Context, date string, typ int, got string) !vweb.Result {
 	prize := app.db.get_cur_prize() or { return check_404(mut ctx, err)! }
 	date_ := match date {
 		'today' { util.sdate_now() }
@@ -173,12 +184,10 @@ fn (mut app App) real_route_put_admin_prize_cur_star(mut ctx Context, date strin
 
 @['/api/admin/prize/cur/star/:date/:typ'; post]
 pub fn (mut app App) route_post_admin_prie_cur_star(mut ctx Context, date string, typ int) vweb.Result {
-	return app.real_route_post_admin_prie_cur_star(mut ctx, date, typ) or {
-		return ctx.server_error('')
-	}
+	return app.real_post_admin_prie_cur_star(mut ctx, date, typ) or { return ctx.server_error('') }
 }
 
-fn (mut app App) real_route_post_admin_prie_cur_star(mut ctx Context, date string, typ int) !vweb.Result {
+fn (mut app App) real_post_admin_prie_cur_star(mut ctx Context, date string, typ int) !vweb.Result {
 	prize := app.db.get_cur_prize() or { return check_404(mut ctx, err)! }
 	util.sdate_check(date) or { return ctx.request_error('bad date') }
 	if start := prize.start {
@@ -192,12 +201,12 @@ fn (mut app App) real_route_post_admin_prie_cur_star(mut ctx Context, date strin
 
 @['/api/admin/prize/cur/star/:date/:typ'; delete]
 pub fn (mut app App) route_delete_admin_prie_cur_star(mut ctx Context, date string, typ int) vweb.Result {
-	return app.real_route_delete_admin_prie_cur_star(mut ctx, date, typ) or {
+	return app.real_delete_admin_prie_cur_star(mut ctx, date, typ) or {
 		return ctx.server_error('')
 	}
 }
 
-fn (mut app App) real_route_delete_admin_prie_cur_star(mut ctx Context, date string, typ int) !vweb.Result {
+fn (mut app App) real_delete_admin_prie_cur_star(mut ctx Context, date string, typ int) !vweb.Result {
 	prize := app.db.get_cur_prize() or { return check_404(mut ctx, err)! }
 	util.sdate_check(date) or { return ctx.request_error('bad date') }
 	if start := prize.start {
@@ -211,12 +220,10 @@ fn (mut app App) real_route_delete_admin_prie_cur_star(mut ctx Context, date str
 
 @['/api/admin/prize/cur/win/:date/:got'; post]
 pub fn (mut app App) route_post_admin_prize_cur_win(mut ctx Context, date string, got string) vweb.Result {
-	return app.real_route_post_admin_prize_cur_win(mut ctx, date, got) or {
-		return ctx.server_error('')
-	}
+	return app.real_post_admin_prize_cur_win(mut ctx, date, got) or { return ctx.server_error('') }
 }
 
-fn (mut app App) real_route_post_admin_prize_cur_win(mut ctx Context, date string, got string) !vweb.Result {
+fn (mut app App) real_post_admin_prize_cur_win(mut ctx Context, date string, got string) !vweb.Result {
 	prize := app.db.get_cur_prize() or { return check_404(mut ctx, err)! }
 	wins := app.db.get_wins(prize.id)!
 	next := next_win(wins, prize.start or { '' }, prize.first_dow)!
@@ -242,14 +249,37 @@ fn (mut app App) real_route_post_admin_prize_cur_win(mut ctx Context, date strin
 	return ctx.json(api.ApiOk{})
 }
 
-@['/api/admin/prize/cur/win/:date'; delete]
-pub fn (mut app App) route_delete_admin_prize_cur_win(mut ctx Context, date string) vweb.Result {
-	return app.real_route_delete_admin_prize_cur_win(mut ctx, date) or {
+@['/api/admin/prizes/:starts/:first_dow/:goal/:star_val'; post]
+pub fn (mut app App) route_post_admin_prizes(mut ctx Context, starts string, first_dow int, goal int, star_val int) vweb.Result {
+	return app.real_post_admin_prizes(mut ctx, starts, first_dow, goal, star_val) or {
 		return ctx.server_error('')
 	}
 }
 
-fn (mut app App) real_route_delete_admin_prize_cur_win(mut ctx Context, date string) !vweb.Result {
+fn (mut app App) real_post_admin_prizes(mut ctx Context, starts string, first_dow int, goal int, star_val int) !vweb.Result {
+	util.parse_sdate(starts) or { return ctx.request_error('bad date') }
+	if goal < 1 {
+		return ctx.request_error('bad goal')
+	}
+	if star_val < 1 {
+		return ctx.request_error('bad star_val')
+	}
+	if first_dow < 1 || first_dow > 7 {
+		return ctx.request_error('bad first_dow')
+	}
+	if _ := app.db.get_cur_prize() {
+		return ctx.request_error('prize active')
+	}
+	app.db.add_prize(starts, first_dow, goal, star_val)!
+	return ctx.json(api.ApiOk{})
+}
+
+@['/api/admin/prize/cur/win/:date'; delete]
+pub fn (mut app App) route_delete_admin_prize_cur_win(mut ctx Context, date string) vweb.Result {
+	return app.real_delete_admin_prize_cur_win(mut ctx, date) or { return ctx.server_error('') }
+}
+
+fn (mut app App) real_delete_admin_prize_cur_win(mut ctx Context, date string) !vweb.Result {
 	prize := app.db.get_cur_prize() or { return check_404(mut ctx, err)! }
 	wins := app.db.get_wins(prize.id)!
 	if wins.len == 0 {
@@ -274,12 +304,12 @@ fn (mut app App) real_route_delete_admin_prize_cur_win(mut ctx Context, date str
 //	return ctx.json(api.ApiOk{})
 //}
 
-@['/api/admin/user'; get]
+@['/api/admin/users'; get]
 pub fn (mut app App) route_admin_user(mut ctx Context) vweb.Result {
-	return app.real_route_admin_user(mut ctx) or { return ctx.server_error('') }
+	return app.real_admin_user(mut ctx) or { return ctx.server_error('') }
 }
 
-fn (mut app App) real_route_admin_user(mut ctx Context) !vweb.Result {
+fn (mut app App) real_admin_user(mut ctx Context) !vweb.Result {
 	users := app.db.get_users()!
 	return ctx.json(api.ApiUsers{
 		users: users.map(api.Api_User{
@@ -293,9 +323,19 @@ fn (mut app App) real_route_admin_user(mut ctx Context) !vweb.Result {
 
 @['/api/admin/user/:username'; put]
 pub fn (mut app App) route_put_admin_user(mut ctx Context, username string) vweb.Result {
-	return app.real_route_put_admin_user(mut ctx, username) or { return ctx.server_error('') }
+	return app.real_put_admin_user(mut ctx, username) or { return ctx.server_error('') }
 }
 
-fn (mut app App) real_route_put_admin_user(mut ctx Context, username string) !vweb.Result {
+fn (mut app App) real_put_admin_user(mut ctx Context, username string) !vweb.Result {
+	return ctx.json(api.ApiOk{})
+}
+
+@['/api/admin/user/:username'; delete]
+pub fn (mut app App) route_delete_admin_user(mut ctx Context, username string) vweb.Result {
+	return app.real_delete_admin_user(mut ctx, username) or { return ctx.server_error('') }
+}
+
+fn (mut app App) real_delete_admin_user(mut ctx Context, username string) !vweb.Result {
+	app.db.delete_user(username)!
 	return ctx.json(api.ApiOk{})
 }

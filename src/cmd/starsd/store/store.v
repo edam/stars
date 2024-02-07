@@ -12,9 +12,12 @@ mut:
 	get_users() ![]User
 	put_user(name string, psk string) !
 	get_user(name string) !User
+	delete_user(name string) !
 	set_user_perms(name string, perms u32) !
 	get_cur_prize() !Prize
 	get_prize(prize_id u64) !Prize
+	add_prize(starts string, first_dow int, goal int, star_val int) !
+	end_prize(prize_id u64) !
 	get_star_count(prize_id u64) !int
 	get_stars(prize_id u64, from string, till string) ![]Star
 	get_last_star(prize_id u64, typ int) !Star
@@ -33,8 +36,7 @@ struct StoreImpl {
 mut:
 	db          orm.Connection
 	cancel      chan int
-	prizes      map[u64]Prize
-	cur_prize   u64
+	cur_prize   ?Prize
 	session_exp int = 60
 }
 
@@ -94,6 +96,12 @@ fn (mut s StoreImpl) get_user(user string) !User {
 	}
 }
 
+fn (mut s StoreImpl) delete_user(user string) ! {
+	sql s.db {
+		delete from User where name == user
+	}!
+}
+
 fn (mut s StoreImpl) set_user_perms(name string, perms u32) ! {
 	sql s.db {
 		update User set perms = perms where name == name
@@ -101,7 +109,7 @@ fn (mut s StoreImpl) set_user_perms(name string, perms u32) ! {
 }
 
 fn (mut s StoreImpl) get_cur_prize() !Prize {
-	if s.cur_prize == 0 {
+	if s.cur_prize == none {
 		today := util.sdate_now()
 		prizes := sql s.db {
 			select from Prize where start <= today && end is none order by start
@@ -111,26 +119,40 @@ fn (mut s StoreImpl) get_cur_prize() !Prize {
 		} else if prizes.len > 1 {
 			return multiple
 		}
-		prize := prizes.first()
-		s.cur_prize = prize.id
-		s.prizes[prize.id] = prize
+		s.cur_prize = prizes.first()
 	}
-	return s.prizes[s.cur_prize]
+	return s.cur_prize or { Prize{} }
 }
 
 fn (mut s StoreImpl) get_prize(prize_id u64) !Prize {
-	if prize_id !in s.prizes {
-		prizes := sql s.db {
-			select from Prize where id == prize_id
-		}!
-		if prizes.len == 1 {
-			prize := prizes.first()
-			s.prizes[prize.id] = prize
-		} else {
-			return not_found
-		}
+	prizes := sql s.db {
+		select from Prize where id == prize_id
+	}!
+	if prizes.len == 1 {
+		return prizes.first()
+	} else {
+		return not_found
 	}
-	return s.prizes[prize_id]
+}
+
+fn (mut s StoreImpl) add_prize(starts string, first_dow int, goal int, star_val int) ! {
+	prize := Prize{
+		start: starts
+		first_dow: first_dow
+		goal: goal
+		star_val: star_val
+	}
+	sql s.db {
+		insert prize into Prize
+	}!
+}
+
+fn (mut s StoreImpl) end_prize(prize_id u64) ! {
+	now := util.sdate_now()
+	sql s.db {
+		update Prize set end = now where id == prize_id && end is none
+	}!
+	s.cur_prize = none
 }
 
 fn (mut s StoreImpl) get_star_count(prize_id u64) !int {

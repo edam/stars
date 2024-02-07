@@ -12,13 +12,15 @@ pub fn (mut c Client) admin() ! {
 	println(fg(.white) + '𝕊𝕋𝔸ℝ𝕊 𝔸𝔻𝕄𝕀ℕ ' + faint + '- ' + reset +
 		fg(.blue) + '${c.user}@${c.host}' + reset)
 	c.auth()!
+	c.keep_alive()
 	for {
 		do_menu(mut c, [
-			MenuItem{'set star', menu_stars},
-			MenuItem{'weekly win', menu_weekly_win},
-			MenuItem{'setup week stars', menu_setup_week_stars()},
+			MenuItem{'set star', menu_stars_set(none)},
+			MenuItem{'weekly win', menu_weeklywin},
+			MenuItem{'setup week stars', menu_starweek()},
 			MenuItem{'deposits', menu_deposit},
 			MenuItem{'setup prizes', menu_prizes},
+			MenuItem{'setup users', menu_users},
 			MenuItem{'quit', menu_quit},
 		]) or {
 			if err.str() == 'back' || err.str() == 'aborted' {
@@ -192,7 +194,7 @@ fn menu_weeklywin_next_set_got(date string, got string) MenuFn {
 fn menu_weeklywin_last_delete(date string) MenuFn {
 	return fn [date] (mut c Client) ! {
 		do_menu(mut c, [
-			MenuItem{'for sure', menu_weeklywin_last_delete_sure(date)},
+			MenuItem{'for sure?', menu_weeklywin_last_delete_sure(date)},
 		])!
 	}
 }
@@ -397,20 +399,39 @@ fn menu_prizes(mut c Client) ! {
 }
 
 fn menu_prizes_add(mut c Client) ! {
-	// starts := inp.read_date('starts: ', util.sdate_now())!
-	// first_dow := inp.read_opt('first dow: ', '', cmds.dow_names)!
-	// goal := inp.read_int('goal (pence): ', none)!
-	// star_val := inp.read_int('star_val (pence): ', 200)!
+	starts := inp.read_date('starts: ', util.sdate_now())!
+	dow := inp.read_opt('first dow: ', '', cmds.dow_names)!
+	first_dow := cmds.dow_names.index(dow)
+	goal := inp.read_int('goal (pence): ', none)!
+	star_val := inp.read_int('star_val (pence): ', 200)!
+	do_menu(mut c, [
+		MenuItem{'for sure?', menu_prizes_add_sure(starts, first_dow, goal, star_val)},
+	])!
+}
+
+fn menu_prizes_add_sure(starts string, first_dow int, goal int, star_val int) MenuFn {
+	return fn [starts, first_dow, goal, star_val] (mut c Client) ! {
+		println('adding prize')
+		c.post[api.ApiOk]('/api/admin/prizes/${starts}/${first_dow}/${goal}/${star_val}')!
+	}
 }
 
 fn menu_prizes_end(mut c Client) ! {
+	do_menu(mut c, [
+		MenuItem{'for sure?', menu_prizes_end_sure},
+	])!
+}
+
+fn menu_prizes_end_sure(mut c Client) ! {
+	println('ending current prize')
+	c.delete[api.ApiOk]('/api/admin/prize/cur')!
 }
 
 fn menu_users(mut c Client) ! {
 	mut menu := []MenuItem{}
 	res := c.get[api.ApiUsers]('/api/admin/users')!
 	for user in res.users {
-		menu << MenuItem{'🧑 {user.name}', menu_user_edit(user)}
+		menu << MenuItem{'🧑 ${user.name}', menu_user_edit(user)}
 	}
 	menu << MenuItem{'add user', menu_user_add}
 	do_menu(mut c, menu)!
@@ -429,7 +450,7 @@ fn menu_user_edit(user api.Api_User) MenuFn {
 fn menu_user_delete(user api.Api_User) MenuFn {
 	return fn [user] (mut c Client) ! {
 		do_menu(mut c, [
-			MenuItem{'for sure', menu_user_delete_sure(user)},
+			MenuItem{'for sure?', menu_user_delete_sure(user)},
 		])!
 	}
 }
@@ -442,4 +463,5 @@ fn menu_user_delete_sure(user api.Api_User) MenuFn {
 }
 
 fn menu_user_add(mut c Client) ! {
+	println('not implemented')
 }
