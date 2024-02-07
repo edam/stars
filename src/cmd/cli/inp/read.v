@@ -3,15 +3,16 @@ module inp
 import util
 import arrays
 
-const dow_names = ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-
 // validate routines
 
 pub fn validate_zero_pad(mut i Input) ! {
 	if i.val.len > 0 {
 		missing := i.width - width(i.val)
+		old_len := i.val.len
 		i.val = arrays.flatten([`0`.repeat(missing).runes(), i.val])
-		i.cur = i.width
+		if old_len < i.val.len {
+			i.cur += i.val.len - old_len
+		}
 	}
 }
 
@@ -23,6 +24,11 @@ pub fn insert_digits_only(mut i Input, action InputAction) ! {
 			i.insert(ch)
 		}
 	}
+}
+
+pub fn insert_and_validate(mut i Input, action InputAction) ! {
+	default_bind_action(mut i, action)!
+	i.validate()!
 }
 
 // read routines
@@ -70,7 +76,9 @@ pub fn read_date(prompt string, init ?string) !string {
 		}
 	}
 	row << ']'
-	return row.read()!#[1..-1]
+	ret := row.read()!#[1..-1]
+	util.parse_sdate(ret)!
+	return ret
 }
 
 pub fn read_int(prompt string, init ?int) !int {
@@ -83,13 +91,46 @@ pub fn read_int(prompt string, init ?int) !int {
 	if init_ := init {
 		input.val = init_.str().runes()
 	}
-	return input.read()!.int()
+	ret := input.read()!
+	if ret == '' {
+		return error('bad int')
+	} else {
+		return ret.int()
+	}
+}
+
+fn validate_opts(opts []string) InputValidateFn {
+	return fn [opts] (mut i Input) ! {
+		for n := 0; n < i.val.len; n++ {
+			mat := i.val[..n + 1].string().to_lower()
+			rem := opts.filter(it.to_lower().starts_with(mat))
+			if rem.len == 0 {
+				i.val = i.val[..n]
+				i.cur = i.val.len
+				return
+			} else if rem.len == 1 {
+				i.val = rem[0].runes()
+				i.cur = i.val.len
+				return
+			} else {
+				i.val[n] = rem[0][n]
+			}
+		}
+	}
 }
 
 pub fn read_opt(prompt string, init ?string, opts []string) !string {
-	sel := read_string(prompt, init)!
-	idx := inp.dow_names.index(sel)
-	if idx == -1 {
+	print(prompt)
+	mut input := Input{
+		val: init or { '' }.runes()
+		validate_fn: validate_opts(opts)
+		bind: {
+			.insert: insert_and_validate
+		}
+	}
+	sel := input.read()!
+	idx := opts.index(sel)
+	if sel == '' || idx == -1 {
 		return error('bad selection')
 	} else {
 		return sel
