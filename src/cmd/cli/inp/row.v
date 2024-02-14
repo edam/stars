@@ -82,6 +82,29 @@ fn (mut row []InputRow) read() !string {
 		}
 	}
 
+	// for .insert inter-input single runes (e.g., `-` in "2024-01-01"), do .tab
+	mut short := ?rune(none)
+	for i := row.len - 1; i >= 0; i-- {
+		mut elem := unsafe { &row[i] }
+		if elem is string && (elem as string).len == 1 {
+			short = (elem as string)[0]
+		} else if s := short {
+			if mut elem is Input {
+				f := elem.bind[.insert] or { default_bind_action }
+				elem.bind[.insert] = fn [s, f] (mut i Input, action InputAction) ! {
+					if ch := action.ch {
+						if ch == s {
+							i.perform(InputAction{.tab, none})!
+							return
+						}
+					}
+					f(mut i, action)!
+				}
+			}
+			short = none
+		}
+	}
+
 	Stage.move(-x)
 	defer {
 		Stage.newln()
