@@ -12,9 +12,14 @@ struct MenuItem {
 	handler ?MenuFn
 }
 
+// errors thrown by do_menu:
+// * back -- returns up into previous do_menu(), which redraws and re-runs
+// * return -- returns up until the last return handler, w/o erasing lines
+// * aborted -- returns up to the top menu (should be handled there)
+
 fn do_menu(mut c Client, menu []MenuItem) ! {
 	mut idx := 0
-    do_menu_sel(mut c, menu, &idx) !
+    do_menu_sel(mut c, menu, &idx)!
 }
 
 fn do_menu_sel(mut c Client, menu []MenuItem, idx &int) ! {
@@ -60,16 +65,16 @@ fn do_menu_sel_(mut c Client, idx_ &int, menu []MenuItem) !int {
 	r.enable_raw_mode_nosig()
 	defer {
 		r.disable_raw_mode()
-		if cur_line > 0 {
-			term.cursor_up(cur_line)
-		}
-		for _ in 0 .. menu.len {
-			term.erase_line_clear()
-			term.cursor_down(1)
-		}
-		term.cursor_up(menu.len)
+		    if cur_line > 0 {
+			    term.cursor_up(cur_line)
+		    }
+		    for _ in 0 .. menu.len {
+			    term.erase_line_clear()
+			    term.cursor_down(1)
+		    }
+		    term.cursor_up(menu.len)
 		unsafe {
-			*idx_ = idx
+			    *idx_ = idx
 		}
 	}
 	for {

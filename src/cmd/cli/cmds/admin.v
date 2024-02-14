@@ -40,35 +40,18 @@ fn menu_quit(mut c Client) ! {
 	return error('aborted')
 }
 
+fn menu_nop(mut c Client) ! {
+	term.clear_previous_line()
+	// returns `return`, so previous menu needs to handle returns!
+}
+
 fn menu_stars_set(when ?string) MenuFn {
 	when_ := when or { 'latest' }
 	return fn [when_] (mut c Client) ! {
 		cur := c.get[api.ApiWeek]('/api/prize/cur/week/${when_}')!
-		mut stars := []api.Api_Star{}
-		if cur.stars.len > 0 && cur.stars[0].got == none {
-			// TODO: go back further!
-			last := c.get[api.ApiWeek]('/api/prize/cur/week/last')!
-			for star in last.stars {
-				if star.got == none {
-					unsafe {
-						stars = last.stars
-					}
-					break
-				}
-			}
-			if stars.len == 0 {
-				unsafe {
-					stars = cur.stars
-				}
-			}
-		} else {
-			unsafe {
-				stars = cur.stars
-			}
-		}
 		mut menu := []MenuItem{}
 		mut idx := -1
-		for i, star in stars {
+		for i, star in cur.stars {
 			got := if got_ := star.got {
 				if got_ { '⭐' } else { '❌' }
 			} else {
@@ -81,7 +64,7 @@ fn menu_stars_set(when ?string) MenuFn {
 		}
 		idx = if idx == -1 { 0 } else { idx }
 		if menu.len <= 0 {
-			println('no stars set up!')
+			println('no week stars set up!')
 		} else {
 			do_menu_sel(mut c, menu, &idx)!
 		}
@@ -194,7 +177,7 @@ fn menu_weeklywin_next_set_got(date string, got string) MenuFn {
 fn menu_weeklywin_last_delete(date string) MenuFn {
 	return fn [date] (mut c Client) ! {
 		do_menu(mut c, [
-			MenuItem{'for sure?', menu_weeklywin_last_delete_sure(date)},
+			MenuItem{'sure?', menu_weeklywin_last_delete_sure(date)},
 		])!
 	}
 }
@@ -250,6 +233,7 @@ fn menu_starweek() MenuFn {
 	pwhen := &when
 	return fn [pwhen] (mut c Client) ! {
 		for {
+			prize_res := c.get[api.ApiPrizeCur]('/api/prize/cur')!
 			res := c.get[api.ApiWeek]('/api/prize/cur/week/${*pwhen}')!
 			unsafe {
 				*pwhen = res.from
@@ -263,12 +247,28 @@ fn menu_starweek() MenuFn {
 				}
 				println('Stars: ${stars}')
 			}
+			// TODO: make 'set star' feint!
+			//
+			// This can be done by going `feint+"set star"+reset`, but it would
+			// need to be redrawn each time.  The problem is that `back` returns
+			// to the previous do_menu() loop and we're never given a chance to
+			// redefine the menu.  To fix this, do_menu should take an array or
+			// MenuRows, which is a sumtype of MenuItem and some other types.
+			// E.g., MenuText could be used to render static (unselectable)
+			// text.  Also, more complex types can be defined which call
+			// function to redefine themselves.  But there would still be a
+			// problem: in this menu, the top stars info row, the edit row and
+			// the set starrow would all need to fetch stars to render/redefine.
+			// This should be fetched one and held at a higher level which the
+			// menu rows all have access to.  How to do that?  Maybe we could
+			// add an invisible MenuData row, which doesn't render and to which
+			// the other rows can access?
 			do_menu(mut c, [
 				MenuItem{none, stars_fn},
 				MenuItem{'edit ${res.from} - ${res.till}', menu_setup_week_edit(pwhen)},
-				MenuItem{'next', menu_starweek_move(pwhen, true)},
-				MenuItem{'prev', menu_starweek_move(pwhen, false)},
-				MenuItem{'set stars', menu_stars_set(pwhen)},
+				MenuItem{'next', menu_starweek_move(pwhen, true, none)},
+				MenuItem{'prev', menu_starweek_move(pwhen, false, prize_res.start)},
+				MenuItem{'set star', menu_stars_set(*pwhen)},
 			]) or {
 				if err.str() != 'return' {
 					return err
@@ -278,17 +278,21 @@ fn menu_starweek() MenuFn {
 	}
 }
 
-fn menu_starweek_move(pwhen &string, next bool) MenuFn {
-	return fn [pwhen, next] (mut c Client) ! {
-		unsafe {
-			*pwhen = util.sdate_add(*pwhen, if next { 7 } else { -7 })!
-			term.clear_previous_line()
+fn menu_starweek_move(pwhen &string, next bool, prize_start ?string) MenuFn {
+	start := prize_start or { '' }
+	return fn [pwhen, next, start] (mut c Client) ! {
+		if start.len == 0 || *pwhen > start {
+			unsafe {
+				*pwhen = util.sdate_add(*pwhen, if next { 7 } else { -7 })!
+			}
 		}
+		menu_nop(mut c)!
 	}
 }
 
 fn menu_setup_week_edit(pwhen &string) MenuFn {
 	return fn [pwhen] (mut c Client) ! {
+		prize_res := c.get[api.ApiPrizeCur]('/api/prize/cur')!
 		mut idx := 0
 		for {
 			res := c.get[api.ApiWeek]('/api/prize/cur/week/${*pwhen}')!
@@ -301,13 +305,17 @@ fn menu_setup_week_edit(pwhen &string) MenuFn {
 					dow := cmds.dow_names[util.sdate_to_dow(pair[0])!]
 					entry := '${pair[1]} ${dow} ${day}${util.ordinal(day)}'
 					if pair[1] == '--' {
-						menu << MenuItem{'add ${entry}', menu_setup_week_add(&idx, pair[2].int(),
-							pair[0])}
+						if pair[0] < prize_res.start {
+							menu << MenuItem{faint + 'add ${entry}' + reset, menu_nop}
+						} else {
+							menu << MenuItem{'add ${entry}', menu_setup_week_add(&idx,
+								pair[2].int(), pair[0])}
+						}
 					} else if pair[1] == '❔' {
 						menu << MenuItem{'del ${entry}', menu_setup_week_delete(&idx,
 							pair[2].int(), pair[0])}
 					} else {
-						menu << MenuItem{faint + 'del' + reset + ' ${entry}', menu_setup_week_nop}
+						menu << MenuItem{faint + 'del' + reset + ' ${entry}', menu_nop}
 					}
 				} else if pair[2].int() > 0 {
 					bonus_stars = bonus_stars + ' ${pair[1]}-B${pair[2]}'
@@ -317,6 +325,9 @@ fn menu_setup_week_edit(pwhen &string) MenuFn {
 			menu << MenuItem{'bonus stars: ${bonus_stars}', menu_setup_week_bonus_stars(res.till,
 				bonus_num)}
 			do_menu_sel(mut c, menu, &idx) or {
+				// if err.str() == 'back' {
+				//	return error('return') // menu has no "completion" otherwise
+				//} else
 				if err.str() != 'return' {
 					return err
 				}
@@ -361,10 +372,6 @@ fn menu_setup_week_bonus_stars(date string, num_bonus int) MenuFn {
 	}
 }
 
-fn menu_setup_week_nop(mut c Client) ! {
-	term.clear_previous_line()
-}
-
 fn menu_deposit(mut c Client) ! {
 	do_menu(mut c, [
 		MenuItem{'add deposit', menu_deposit_add},
@@ -385,8 +392,8 @@ fn menu_prizes(mut c Client) ! {
 	if res := c.get[api.ApiPrizeCur]('/api/prize/cur') {
 		dow_s := cmds.dow_names[res.first_dow]
 		dow_e := cmds.dow_names[(res.first_dow + 5) % 7 + 1]
-		menu << MenuItem{'Cur prize: £${res.goal / 100:.2} (${res.stars} stars), week is ${dow_s}-${dow_e} since ${res.start}', none}
-		menu << MenuItem{'end', menu_prizes_end}
+		menu << MenuItem{'Cur prize: £${res.goal / 100:.2} (${res.stars} stars), week is ${dow_s}-${dow_e}, started ${res.start}', none}
+		menu << MenuItem{'end', menu_sure(menu_prizes_end)}
 	} else {
 		if err.str() != 'not found' {
 			return err
@@ -398,15 +405,26 @@ fn menu_prizes(mut c Client) ! {
 	do_menu(mut c, menu)!
 }
 
+fn menu_sure(sure_fn MenuFn) MenuFn {
+	return fn [sure_fn] (mut c Client) ! {
+		do_menu(mut c, [
+			MenuItem{'sure?', sure_fn},
+		])!
+	}
+}
+
 fn menu_prizes_add(mut c Client) ! {
 	starts := inp.read_date('starts: ', util.sdate_now())!
 	dow := inp.read_opt('first dow: ', '', cmds.dow_names)!
 	first_dow := cmds.dow_names.index(dow)
 	goal := inp.read_int('goal (pence): ', none)!
 	star_val := inp.read_int('star_val (pence): ', 200)!
-	do_menu(mut c, [
-		MenuItem{'for sure?', menu_prizes_add_sure(starts, first_dow, goal, star_val)},
-	])!
+	// TODO: use inline closure, when it doesn't create cc error
+	menu_sure(menu_prizes_add_sure(starts, first_dow, goal, star_val))(mut c)!
+	// menu_sure(fn [starts, first_dow, goal, star_val] (mut c Client) ! {
+	//	println('adding prize')
+	//	c.post[api.ApiOk]('/api/admin/prizes/${starts}/${first_dow}/${goal}/${star_val}')!
+	//})(mut c)!
 }
 
 fn menu_prizes_add_sure(starts string, first_dow int, goal int, star_val int) MenuFn {
@@ -417,12 +435,6 @@ fn menu_prizes_add_sure(starts string, first_dow int, goal int, star_val int) Me
 }
 
 fn menu_prizes_end(mut c Client) ! {
-	do_menu(mut c, [
-		MenuItem{'for sure?', menu_prizes_end_sure},
-	])!
-}
-
-fn menu_prizes_end_sure(mut c Client) ! {
 	println('ending current prize')
 	c.delete[api.ApiOk]('/api/admin/prize/cur')!
 }
@@ -442,20 +454,12 @@ fn menu_user_edit(user api.Api_User) MenuFn {
 		do_menu(mut c, [
 			// MenuItem{'set password', menu_user_edit_password()},
 			// MenuItem{'set permissions', menu_user_set_perms(user)},
-			MenuItem{'delete', menu_user_delete(user)},
+			MenuItem{'delete', menu_sure(menu_user_delete(user))},
 		])!
 	}
 }
 
 fn menu_user_delete(user api.Api_User) MenuFn {
-	return fn [user] (mut c Client) ! {
-		do_menu(mut c, [
-			MenuItem{'for sure?', menu_user_delete_sure(user)},
-		])!
-	}
-}
-
-fn menu_user_delete_sure(user api.Api_User) MenuFn {
 	return fn [user] (mut c Client) ! {
 		println('deleting user ${user.name}')
 		c.delete[api.ApiOk]('/api/admin/user/${user.name}')!
