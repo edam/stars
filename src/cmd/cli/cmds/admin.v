@@ -231,7 +231,9 @@ fn menu_starweek_parse_stars(from string, stars []api.Api_Star) ![][]string {
 fn menu_starweek() MenuFn {
 	mut when := 'cur'
 	pwhen := &when
-	return fn [pwhen] (mut c Client) ! {
+	mut idx := 0
+	pidx := &idx
+	return fn [pwhen, pidx] (mut c Client) ! {
 		for {
 			prize_res := c.get[api.ApiPrizeCur]('/api/prize/cur')!
 			res := c.get[api.ApiWeek]('/api/prize/cur/week/${*pwhen}')!
@@ -263,13 +265,13 @@ fn menu_starweek() MenuFn {
 			// menu rows all have access to.  How to do that?  Maybe we could
 			// add an invisible MenuData row, which doesn't render and to which
 			// the other rows can access?
-			do_menu(mut c, [
+			do_menu_sel(mut c, [
 				MenuItem{none, stars_fn},
 				MenuItem{'edit ${res.from} - ${res.till}', menu_setup_week_edit(pwhen)},
 				MenuItem{'next', menu_starweek_move(pwhen, true, none)},
 				MenuItem{'prev', menu_starweek_move(pwhen, false, prize_res.start)},
 				MenuItem{'set star', menu_stars_set(*pwhen)},
-			]) or {
+			], pidx) or {
 				if err.str() != 'return' {
 					return err
 				}
