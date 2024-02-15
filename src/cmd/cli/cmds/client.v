@@ -7,6 +7,7 @@ import crypto.sha256
 import edam.ggetopt { die }
 import time
 import defaults
+import math
 
 pub struct Client {
 	host string
@@ -14,7 +15,8 @@ pub struct Client {
 	user string
 	pw   string
 mut:
-	session_id ?string
+	session_id  ?string
+	session_ttl int
 }
 
 fn (mut c Client) auth() ! {
@@ -23,13 +25,14 @@ fn (mut c Client) auth() ! {
 	}
 	resp := c.get[api.ApiAuth]('/api/auth/${c.user}')!
 	psk := sha256.hexhash(c.pw)
+	c.session_ttl = if resp.session_ttl > 0 { resp.session_ttl } else { defaults.session_ttl }
 	c.session_id = sha256.hexhash('${psk}:${resp.challenge}')
 }
 
 fn (mut c Client) keep_alive() {
 	go fn [mut c] () {
 		for {
-			time.sleep(time.second * (defaults.session_ttl - 5))
+			time.sleep(time.second * math.max(0, c.session_ttl - 5))
 			c.get[api.ApiOk]('/api/ping') or { break }
 		}
 	}()

@@ -14,6 +14,7 @@ pub fn (mut app App) route_auth(mut ctx Context, username string) vweb.Result {
 	time.sleep(time.second)
 	return ctx.json(api.ApiAuth{
 		challenge: challenge
+		session_ttl: app.args.session_ttl
 	})
 }
 

@@ -2,7 +2,8 @@ module api
 
 pub struct ApiAuth {
 pub:
-	challenge string
+	challenge   string
+	session_ttl int
 }
 
 pub struct ApiPrizeCur {
