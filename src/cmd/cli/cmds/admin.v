@@ -128,64 +128,86 @@ fn menu_star_got_set(typ int, got string, date &string) MenuFn {
 }
 
 fn menu_weeklywin(mut c Client) ! {
-	res := c.get[api.ApiWins]('/api/prize/cur/wins/all')!
-	mut menu := []MenuItem{}
-	mut last := ''
-	if res.wins.len > 0 {
+	mut date := ''
+	pdate := &date
+	for {
+		res := c.get[api.ApiWins]('/api/prize/cur/wins/all')!
+		mut last := ''
 		mut week := ''
-		mut count := 0
-		for win in res.wins {
-			if count % 4 == 0 {
-				week = ''
+		if res.wins.len > 0 {
+			mut count := 0
+			for win in res.wins {
+				if count % 4 == 0 {
+					week = ''
+				}
+				week += if win.got { ' 🏅' } else { ' ❌' }
+				count += if win.got { 1 } else { 0 }
 			}
-			week += if win.got { ' 🏅' } else { ' ❌' }
-			count += if win.got { 1 } else { 0 }
+			//		week = week#[..-1] + '>' + week#[-1..]
+			week += ' ❔'.repeat((4 - count % 4) % 4)
+			last = res.wins#[-1..][0].at
 		}
-		//		week = week#[..-1] + '>' + week#[-1..]
-		week += ' ❔'.repeat((4 - count % 4) % 4)
-		last = res.wins#[-1..][0].at
-		menu << MenuItem{'Last wins:${week}', none}
-	} else {
-		menu << MenuItem{'No wins yet. Next win is based on prize start date and last day of week.', none}
-	}
+		if date.len == 0 {
+			date = res.next
+		}
+		next_dow := cmds.dow_names[util.sdate_dow(res.next)!]
 
-	next_dow := cmds.dow_names[util.sdate_to_dow(res.next)!]
-	menu << MenuItem{'set next (${next_dow} ${res.next})', menu_weeklywin_next_set(res.next)}
-	if last.len > 0 {
-		last_dow := cmds.dow_names[util.sdate_to_dow(last)!]
-		menu << MenuItem{'delete last (${last_dow} ${last})', menu_weeklywin_last_delete(last)}
+		mut menu := []MenuItem{}
+		if last.len > 0 {
+			menu << MenuItem{'Last win: ${week}', none}
+		} else {
+			menu << MenuItem{'Last win: none (basing next win on prize start date and last day of week)', none}
+		}
+		menu << MenuItem{'set next (${next_dow} ${*pdate})', menu_weeklywin_next_set(pdate)}
+		if last.len > 0 {
+			last_dow := cmds.dow_names[util.sdate_dow(last)!]
+			menu << MenuItem{'delete last (${last_dow} ${last})', menu_sure(menu_weeklywin_last_delete(pdate,
+				last))}
+		}
+		do_menu(mut c, menu) or {
+			if err.str() != 'return' {
+				return err
+			}
+		}
 	}
-	do_menu(mut c, menu)!
 }
 
-fn menu_weeklywin_next_set(date string) MenuFn {
-	return fn [date] (mut c Client) ! {
+fn menu_weeklywin_next_set(pdate &string) MenuFn {
+	return fn [pdate] (mut c Client) ! {
 		do_menu(mut c, [
-			MenuItem{'got', menu_weeklywin_next_set_got(date, 'got')},
-			MenuItem{'lost', menu_weeklywin_next_set_got(date, 'lost')},
+			MenuItem{'got', menu_weeklywin_next_set_got(pdate, 'got')},
+			MenuItem{'lost', menu_weeklywin_next_set_got(pdate, 'lost')},
+			MenuItem{'skip', menu_weeklywin_skip(pdate)},
 		])!
 	}
 }
 
-fn menu_weeklywin_next_set_got(date string, got string) MenuFn {
-	return fn [date, got] (mut c Client) ! {
+fn menu_weeklywin_skip(pdate &string) MenuFn {
+	return fn [pdate] (mut c Client) ! {
+		unsafe {
+			*pdate = util.sdate_add(*pdate, 7)!
+		}
+		menu_nop(mut c)!
+	}
+}
+
+fn menu_weeklywin_next_set_got(pdate &string, got string) MenuFn {
+	return fn [pdate, got] (mut c Client) ! {
 		println('setting next win to ${got}')
-		c.post[api.ApiOk]('/api/admin/prize/cur/win/${date}/${got}')!
+		c.post[api.ApiOk]('/api/admin/prize/cur/win/${*pdate}/${got}')!
+		unsafe {
+			*pdate = ''
+		}
 	}
 }
 
-fn menu_weeklywin_last_delete(date string) MenuFn {
-	return fn [date] (mut c Client) ! {
-		do_menu(mut c, [
-			MenuItem{'sure?', menu_weeklywin_last_delete_sure(date)},
-		])!
-	}
-}
-
-fn menu_weeklywin_last_delete_sure(date string) MenuFn {
-	return fn [date] (mut c Client) ! {
+fn menu_weeklywin_last_delete(pdate &string, date string) MenuFn {
+	return fn [pdate, date] (mut c Client) ! {
 		println('deleting last win')
 		c.delete[api.ApiOk]('/api/admin/prize/cur/win/${date}')!
+		unsafe {
+			*pdate = ''
+		}
 	}
 }
 
@@ -304,7 +326,7 @@ fn menu_setup_week_edit(pwhen &string) MenuFn {
 			for pair in menu_starweek_parse_stars(*pwhen, res.stars)! {
 				if pair[2].int() == 0 {
 					_, _, day := util.parse_sdate(pair[0])!
-					dow := cmds.dow_names[util.sdate_to_dow(pair[0])!]
+					dow := cmds.dow_names[util.sdate_dow(pair[0])!]
 					entry := '${pair[1]} ${dow} ${day}${util.ordinal(day)}'
 					if pair[1] == '--' {
 						if pair[0] < prize_res.start {

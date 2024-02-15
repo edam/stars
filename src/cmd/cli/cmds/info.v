@@ -17,7 +17,7 @@ pub fn (mut c Client) info() ! {
 	prt(lcr(faint + '~', fg(.white) + stars_title, faint + '~'))
 
 	draw_grand_prize(res1)
-	draw_weekly_stars(true, res2)
+	draw_weekly_stars(cmds.this_week, res2)
 	prt(lcr('ᴍᴏɴᴛʜʟʏ ᴍᴇᴅᴀʟꜱ', '', 'ʙᴏɴᴜꜱ '))
 	draw_month_of_wins(res3.wins, none)
 	draw_server_line(c.host, sw.elapsed().milliseconds())
@@ -67,7 +67,11 @@ fn draw_star(got ?bool, total &int, avail &int) string {
 	}
 }
 
-fn draw_weekly_stars(this bool, res api.ApiWeek) {
+const this_week = 'ᴛʜɪꜱ ᴡᴇᴇᴋ'
+const last_week = 'ʟᴀꜱᴛ ᴡᴇᴇᴋ'
+const latest = 'ʟᴀᴛᴇꜱᴛ'
+
+fn draw_weekly_stars(week string, res api.ApiWeek) {
 	mut regular := 0
 	mut bonus := []int{}
 	for star in res.stars {
@@ -79,9 +83,7 @@ fn draw_weekly_stars(this bool, res api.ApiWeek) {
 	}
 	bonus.sort(a < b)
 
-	week := if this { 'ᴛʜɪꜱ ᴡᴇᴇᴋ' } else { 'ʟᴀꜱᴛ ᴡᴇᴇᴋ' }
 	nweek := math.max(9, 2 + 4 * regular)
-
 	info1 := la([week, '▔'.repeat(nweek)])
 	info2 := la(['ʙᴏɴᴜꜱ', '▔▔▔▔▔▔'])
 
@@ -89,7 +91,7 @@ fn draw_weekly_stars(this bool, res api.ApiWeek) {
 	mut avail := 0
 	mut sline := '  ' +
 		res.stars.filter(it.typ == 0).map(draw_star(it.got, &total, &avail)).join('  ')
-	mut dline := '  ' + fg(.black) + faint + res.stars.filter(it.typ == 0).map(day_names[util.sdate_to_dow(it.at) or {
+	mut dline := '  ' + fg(.black) + faint + res.stars.filter(it.typ == 0).map(day_names[util.sdate_dow(it.at) or {
 		0
 	}].runes()#[0..2].string()).join('  ')
 	for typ in bonus {

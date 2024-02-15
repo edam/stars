@@ -20,12 +20,13 @@ mut:
 	end_prize(prize_id u64) !
 	get_star_count(prize_id u64) !int
 	get_stars(prize_id u64, from string, till string) ![]Star
+	get_stars_n(prize_id u64, n int) ![]Star
 	get_last_star(prize_id u64, typ int) !Star
 	get_deposits(prize_id u64) ![]Deposit
 	set_star_got(prize_id u64, at string, typ int, got ?bool) !bool
 	add_star(prize_id u64, at string, typ int, got ?bool) !
 	delete_star(prize_id u64, at string, typ int) !
-	get_wins(prize_id u64) ![]Win
+	get_wins(prize_id u64, limit ?int) ![]Win
 	set_win(prize_id u64, at string, got bool) !
 	delete_win(prize_id u64, at string) !
 	add_deposit(prize_id u64, at string, amount int, desc string) !
@@ -162,6 +163,7 @@ fn (mut s StoreImpl) get_star_count(prize_id u64) !int {
 	return count
 }
 
+// fetch stars in time range in "star order"
 fn (mut s StoreImpl) get_stars(prize_id u64, from string, till string) ![]Star {
 	stars := sql s.db {
 		select from Star where prize_id == prize_id && typ >= 0 && at >= from && at <= till order by at
@@ -181,9 +183,18 @@ fn (mut s StoreImpl) get_stars(prize_id u64, from string, till string) ![]Star {
 	})
 }
 
+// fetch latest n got/lost (not null) stars in date order
+fn (mut s StoreImpl) get_stars_n(prize_id u64, n int) ![]Star {
+	stars := sql s.db {
+		select from Star where prize_id == prize_id && typ >= 0 && got !is none order by at desc limit n
+	}!
+	return stars.sorted(a.at < b.at)
+}
+
+// fetch latest got/lost (not null) star of type
 fn (mut s StoreImpl) get_last_star(prize_id u64, typ int) !Star {
 	stars := sql s.db {
-		select from Star where prize_id == prize_id && typ == typ order by at desc limit 1
+		select from Star where prize_id == prize_id && typ == typ && got !is none order by at desc limit 1
 	}!
 	return if stars.len > 0 { stars[0] } else { not_found }
 }
@@ -232,10 +243,16 @@ fn (mut s StoreImpl) delete_star(prize_id u64, at string, typ int) ! {
 	}!
 }
 
-fn (mut s StoreImpl) get_wins(prize_id u64) ![]Win {
-	return sql s.db {
-		select from Win where prize_id == prize_id order by at
-	}!
+fn (mut s StoreImpl) get_wins(prize_id u64, limit ?int) ![]Win {
+	if limit_ := limit {
+		return sql s.db {
+			select from Win where prize_id == prize_id order by at desc limit limit_
+		}!
+	} else {
+		return sql s.db {
+			select from Win where prize_id == prize_id order by at
+		}!
+	}
 }
 
 fn (mut s StoreImpl) set_win(prize_id u64, at string, got bool) ! {

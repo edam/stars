@@ -71,6 +71,8 @@ pub fn (mut app App) run() {
 	vweb.run[App, Context](mut app, app.args.port)
 }
 
+// middleware
+
 fn (mut app App) skip_auth_check(mut ctx Context) bool {
 	ctx.skip_auth_check = true
 	return true
@@ -101,8 +103,11 @@ fn (mut app App) check_admin(mut ctx Context) bool {
 		}
 	}
 	ctx.res.set_status(.forbidden)
+	ctx.send_response_to_client('text/plain', 'Forbidden')
 	return false
 }
+
+// helper
 
 fn check_404(mut ctx Context, err IError) !vweb.Result {
 	if err == store.not_found {

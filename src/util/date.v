@@ -116,7 +116,7 @@ pub fn sdate_now() string {
 }
 
 // calc day of week (1-7) from sdate
-pub fn sdate_to_dow(date string) !int {
+pub fn sdate_dow(date string) !int {
 	y, m, d := parse_sdate(date)!
 	return date_to_dow(y, m, d)!
 }

@@ -20,6 +20,9 @@ fn main() {
 		'last' {
 			client.last() or { die(err) }
 		}
+		'latest' {
+			client.latest() or { die(err) }
+		}
 		'admin' {
 			client.admin() or { die(err) }
 		}

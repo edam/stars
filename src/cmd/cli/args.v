@@ -35,7 +35,7 @@ const options = [
 	ggetopt.text(''),
 	ggetopt.text('Commands:'),
 	ggetopt.text('  stars     Grand prize, daily stars and medals overview (default)'),
-	ggetopt.text("  last      Last week's stars"),
+	ggetopt.text("  last      Last (latest) week's stars"),
 	ggetopt.text('  medals    Weekly wins and monthly medals'),
 	ggetopt.text('  deposits  Show deposit details'),
 	ggetopt.text('  admin     Admin menu'),
