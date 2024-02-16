@@ -1,9 +1,12 @@
 module api
 
+const api_version = 2
+
 pub struct ApiAuth {
 pub:
 	challenge   string
 	session_ttl int
+	api_version int = api.api_version
 }
 
 pub struct ApiPrizeCur {
