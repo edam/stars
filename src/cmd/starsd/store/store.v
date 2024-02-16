@@ -163,7 +163,7 @@ fn (mut s StoreImpl) get_star_count(prize_id u64) !int {
 	return count
 }
 
-// fetch stars in time range in "star order"
+// fetch positive-type stars in time range in "star order"
 fn (mut s StoreImpl) get_stars(prize_id u64, from string, till string) ![]Star {
 	stars := sql s.db {
 		select from Star where prize_id == prize_id && typ >= 0 && at >= from && at <= till order by at
@@ -183,10 +183,10 @@ fn (mut s StoreImpl) get_stars(prize_id u64, from string, till string) ![]Star {
 	})
 }
 
-// fetch latest n got/lost (not null) stars in date order
+// fetch latest n got/lost (not null) stars of any type in date order
 fn (mut s StoreImpl) get_stars_n(prize_id u64, n int) ![]Star {
 	stars := sql s.db {
-		select from Star where prize_id == prize_id && typ >= 0 && got !is none order by at desc limit n
+		select from Star where prize_id == prize_id && got !is none order by at desc limit n
 	}!
 	return stars.sorted(a.at < b.at)
 }

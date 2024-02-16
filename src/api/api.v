@@ -76,3 +76,13 @@ pub struct Api_UserPerms {
 pub:
 	admin bool
 }
+
+pub struct ApiStats {
+pub:
+	from string
+	till string
+	got  struct {
+	pub:
+		stars int
+	}
+}

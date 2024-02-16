@@ -115,19 +115,20 @@ pub fn (mut app App) real_prize_cur_stats(mut ctx Context, num_stars int) !vweb.
 	if stars.len == 0 {
 		return ctx.not_found()
 	}
-	mut num_got := 0
+	mut ngot := 0
 	for star in stars {
 		if got := star.got {
 			if got {
-				num_got++
+				ngot++
 			}
 		}
 	}
 	return ctx.json(api.ApiStats{
 		from: stars[0].at
 		till: stars[stars.len - 1].at
-		count: stars.len
-		num_got: num_got
+		got: struct {
+			stars: ngot * prize.star_val
+		}
 	})
 }
 

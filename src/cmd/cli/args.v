@@ -4,23 +4,27 @@ import toml
 
 const default_conf = '~/.starsrc'
 const default_port = 8070
+const default_eta_stars = 30
 
 @[heap]
 pub struct Args {
 pub mut:
-	cmd      ?string
-	cmd_args []string
-	conf     string = default_conf
-	host     string
-	port     int = default_port
-	user     string
-	pw       string
+	cmd       ?string
+	cmd_args  []string
+	conf      string = default_conf
+	host      string
+	port      int = default_port
+	user      string
+	pw        string
+	eta_stars int = default_eta_stars
 }
 
 const options = [
 	ggetopt.text('Usage: ${ggetopt.prog()} [OPTION]... [COMMAND]'),
 	ggetopt.text(''),
 	ggetopt.text('Options:'),
+	ggetopt.opt('eta-stars', `e`).arg('NUM', true)
+		.help('base estimates on NUM last stars (${default_eta_stars})'),
 	ggetopt.opt('conf', `c`).arg('FILE', true)
 		.help('configuration file (${default_conf})'),
 	ggetopt.opt('host', `h`).arg('HOST', true)
@@ -71,6 +75,12 @@ fn (mut a Args) process_arg(arg string, val ?string) ! {
 		'password' {
 			a.pw = val or { '' }
 		}
+		'eta-stars', 'e' {
+			a.eta_stars = val or { '' }.int()
+			if a.eta_stars < 2 {
+				return error('--eta-stars: must be >= 2')
+			}
+		}
 		else {}
 	}
 }
@@ -80,9 +90,8 @@ fn (mut a Args) load_conf() ! {
 	if os.is_file(file) {
 		conf := toml.parse_file(file) or { return error('error parsing ${file}\n${err}') }
 		if val := conf.value_opt('server.port') {
-			if val.int() > 1024 {
-				a.port = val.int()
-			} else {
+			a.port = val.int()
+			if a.port > 1024 {
 				return error('port must be > 1024')
 			}
 		}
@@ -94,6 +103,12 @@ fn (mut a Args) load_conf() ! {
 		}
 		if val := conf.value_opt('client.password') {
 			a.pw = val.string()
+		}
+		if val := conf.value_opt('client.eta-stars') {
+			a.eta_stars = val.int()
+			if a.eta_stars < 1 {
+				return error('num must be > 0')
+			}
 		}
 	}
 }

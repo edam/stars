@@ -10,10 +10,11 @@ import defaults
 import math
 
 pub struct Client {
-	host string
-	port int
-	user string
-	pw   string
+	host      string
+	port      int
+	user      string
+	pw        string
+	eta_stars int
 mut:
 	session_id  ?string
 	session_ttl int

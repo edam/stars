@@ -11,6 +11,7 @@ fn main() {
 		port: args.port
 		user: args.user
 		pw: args.pw
+		eta_stars: args.eta_stars
 	}
 
 	match args.cmd or { '' } {

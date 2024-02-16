@@ -12,18 +12,19 @@ pub fn (mut c Client) info() ! {
 	res1 := c.get[api.ApiPrizeCur]('/api/prize/cur')!
 	res2 := c.get[api.ApiWeek]('/api/prize/cur/week/cur')!
 	res3 := c.get[api.ApiWins]('/api/prize/cur/wins')!
+	res4 := c.get[api.ApiStats]('/api/prize/cur/stats/${c.eta_stars}')!
 
 	prt('')
 	prt(lcr(faint + '~', fg(.white) + stars_title, faint + '~'))
 
-	draw_grand_prize(res1)
+	draw_grand_prize(res1, res4)
 	draw_weekly_stars(cmds.this_week, res2)
 	prt(lcr('ᴍᴏɴᴛʜʟʏ ᴍᴇᴅᴀʟꜱ', '', 'ʙᴏɴᴜꜱ '))
 	draw_month_of_wins(res3.wins, none)
 	draw_server_line(c.host, sw.elapsed().milliseconds())
 }
 
-fn draw_grand_prize(res api.ApiPrizeCur) {
+fn draw_grand_prize(res api.ApiPrizeCur, res4 api.ApiStats) {
 	star_width := width * res.got.stars / res.goal
 	dep_width := width * res.got.deposits / res.goal
 	rem_width := width - star_width - dep_width
@@ -41,13 +42,19 @@ fn draw_grand_prize(res api.ApiPrizeCur) {
 	prt('${tline}')
 	prt('${bline}')
 
-	remaining := math.max(0, res.goal - res.got.stars - res.got.deposits)
-	start := time.parse('${res.start} 00:00:00') or { time.now() }
-	so_far := time.now() - start
-	est_days := so_far.days() * (f64(remaining) / f64(res.got.stars))
+	remaining := f64(math.max(0, res.goal - res.got.stars - res.got.deposits))
+	sample_start := time.parse('${res4.from} 00:00:00') or { time.now() }
+	sample_end := time.parse(('${res4.till} 23:59:59')) or { time.now() }
+	sample_dur := sample_end - sample_start
+	est_days := sample_dur.days() * (remaining / f64(res4.got.stars))
 	est_end := time.now().add_days(int(est_days))
 	eta := '${est_end.day} ${month_names[est_end.month]}'
 
+	// println('remaining ${remaining}')
+	// println('sample ${sample_start} to ${sample_end}: ${res4.got.stars}')
+	// println('sample duration ${sample_dur}')
+	// println('est_days ${est_days}')
+	// println('est_end ${est_end}')
 	prt(lcr(fg(.yellow) + '${info1[0]} = £${info2[0]}' + reset, '', 'total ' + fg(.white) +
 		'£${(res.got.stars + res.got.deposits) / 100} / £${res.goal / 100}'))
 	prt(lcr(fg(.green) + '${info1[1]} = £${info2[1]}' + reset, '', 'ETA: ${eta}'))
