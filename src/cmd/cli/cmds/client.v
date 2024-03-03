@@ -24,10 +24,18 @@ fn (mut c Client) auth() ! {
 	if c.user == '' || c.pw == '' {
 		die('username and pre-shared key required')
 	}
-	resp := c.get[api.ApiAuth]('/api/auth/${c.user}')!
+	res := c.get[api.ApiAuth]('/api/auth/${c.user}')!
+
+	if res.api_version < api.api_version {
+		return error('server is out of date')
+	} else if res.api_version > api.api_version {
+		return error('server is newer than client')
+	}
+
+	c.session_ttl = if res.session_ttl > 0 { res.session_ttl } else { defaults.session_ttl }
+
 	psk := sha256.hexhash(c.pw)
-	c.session_ttl = if resp.session_ttl > 0 { resp.session_ttl } else { defaults.session_ttl }
-	c.session_id = sha256.hexhash('${psk}:${resp.challenge}')
+	c.session_id = sha256.hexhash('${psk}:${res.challenge}')
 }
 
 fn (mut c Client) keep_alive() {
@@ -66,17 +74,17 @@ fn (mut c Client) fetch[T](uri string, method http.Method) !T {
 			verb := method.str().to_upper()
 			eprintln('${verb} ${url}')
 		}
-		resp := http.fetch(
+		res := http.fetch(
 			method: method
 			url: url
 			cookies: cookies
 		)!
-		match resp.status_code {
+		match res.status_code {
 			200 {
 				$if trace_stars ? {
-					eprintln(resp.body)
+					eprintln(res.body)
 				}
-				return json.decode(T, resp.body)!
+				return json.decode(T, res.body)!
 			}
 			403 {
 				return error('not authorised')
@@ -85,7 +93,7 @@ fn (mut c Client) fetch[T](uri string, method http.Method) !T {
 				return error('not found')
 			}
 			else {
-				return error('bad response: ${resp.status_code}')
+				return error('bad response: ${res.status_code}')
 			}
 		}
 	}
