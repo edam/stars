@@ -58,7 +58,8 @@ fn menu_stars_set(when ?string) MenuFn {
 				idx = if idx == -1 { i } else { idx }
 				'❔'
 			}
-			info := if star.typ > 0 { '-B${star.typ}' } else { ' ${star.at}' }
+			dow := cmds.dow_names[util.sdate_dow(star.at)!]
+			info := if star.typ > 0 { '-B${star.typ}' } else { ' ${star.at} ${dow}' }
 			title := '${got}${info}'
 			menu << MenuItem{title, menu_star_set(star.at, star.typ)}
 		}
