@@ -6,6 +6,7 @@ import api
 import rand
 import crypto.sha256
 import time
+import json
 
 @['/api/auth/:username'; get]
 pub fn (mut app App) route_auth(mut ctx Context, username string) vweb.Result {
@@ -45,11 +46,14 @@ fn (mut app App) real_prize_cur(mut ctx Context) !vweb.Result {
 		deposits_total += deposit.amount
 	}
 	return ctx.json(api.ApiPrizeCur{
-		prize_id: prize.id
-		start: prize.start or { '' }
+		prize: api.Api_Prize{
+			id: prize.id
+			start: prize.start or { '' }
+			goal: prize.goal
+			first_dow: prize.first_dow
+			star_val: prize.star_val
+		}
 		stars: count
-		goal: prize.goal
-		first_dow: prize.first_dow
 		got: struct {
 			stars: count * prize.star_val
 			deposits: deposits_total
@@ -188,6 +192,8 @@ fn (mut app App) real_prize_cur_wins(mut ctx Context) !vweb.Result {
 	})
 }
 
+// -- admin
+
 @['/api/admin/prize/cur'; delete]
 pub fn (mut app App) route_delete_admin_prize_cur(mut ctx Context) vweb.Result {
 	return app.real_delete_admin_prize_cur(mut ctx) or { return ctx.server_error('') }
@@ -294,28 +300,54 @@ fn (mut app App) real_post_admin_prize_cur_win(mut ctx Context, date string, got
 	return ctx.json(api.ApiOk{})
 }
 
-@['/api/admin/prizes/:starts/:first_dow/:goal/:star_val'; post]
-pub fn (mut app App) route_post_admin_prizes(mut ctx Context, starts string, first_dow int, goal int, star_val int) vweb.Result {
-	return app.real_post_admin_prizes(mut ctx, starts, first_dow, goal, star_val) or {
-		return ctx.server_error('')
-	}
+@['/api/admin/prize/cur/goal/:goal'; put]
+pub fn (mut app App) route_put_admin_prize_cur_goal(mut ctx Context, goal int) vweb.Result {
+	return app.real_put_admin_prize_cur_goal(mut ctx, goal) or { return ctx.server_error('') }
 }
 
-fn (mut app App) real_post_admin_prizes(mut ctx Context, starts string, first_dow int, goal int, star_val int) !vweb.Result {
-	util.parse_sdate(starts) or { return ctx.request_error('bad date') }
-	if goal < 1 {
+fn (mut app App) real_put_admin_prize_cur_goal(mut ctx Context, goal int) !vweb.Result {
+	prize := app.db.get_cur_prize() or { return check_404(mut ctx, err)! }
+	app.db.set_prize_goal(prize.id, goal)!
+	return ctx.json(api.ApiOk{})
+}
+
+@['/api/admin/prize'; post]
+pub fn (mut app App) route_post_admin_prize(mut ctx Context) vweb.Result {
+	return app.real_post_admin_prize(mut ctx) or { return ctx.server_error('') }
+}
+
+fn (mut app App) real_post_admin_prize(mut ctx Context) !vweb.Result {
+	prize := json.decode(api.Api_Prize, ctx.form['json']!)!
+	util.parse_sdate(prize.start) or { return ctx.request_error('bad date') }
+	if prize.goal < 1 {
 		return ctx.request_error('bad goal')
 	}
-	if star_val < 1 {
+	if prize.star_val < 1 {
 		return ctx.request_error('bad star_val')
 	}
-	if first_dow < 1 || first_dow > 7 {
+	if prize.first_dow < 1 || prize.first_dow > 7 {
 		return ctx.request_error('bad first_dow')
 	}
 	if _ := app.db.get_cur_prize() {
 		return ctx.request_error('prize active')
 	}
-	app.db.add_prize(starts, first_dow, goal, star_val)!
+	app.db.add_prize(prize.start, prize.first_dow, prize.goal, prize.star_val)!
+	return ctx.json(api.ApiOk{})
+}
+
+@['/api/admin/prize/cur/deposit'; post]
+pub fn (mut app App) route_post_admin_prize_cur_deposit(mut ctx Context) vweb.Result {
+	return app.real_post_admin_prize_cur_deposit(mut ctx) or { return ctx.server_error('') }
+}
+
+fn (mut app App) real_post_admin_prize_cur_deposit(mut ctx Context) !vweb.Result {
+	deposit := json.decode(api.Api_Deposit, ctx.form['json']!)!
+	prize := app.db.get_cur_prize() or { return check_404(mut ctx, err)! }
+	util.parse_sdate(deposit.at) or { return ctx.request_error('bad date') }
+	if deposit.amount < 1 {
+		return ctx.request_error('bad amount')
+	}
+	app.db.add_deposit(prize.id, deposit.at, deposit.amount, deposit.desc)!
 	return ctx.json(api.ApiOk{})
 }
 

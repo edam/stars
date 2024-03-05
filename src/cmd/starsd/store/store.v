@@ -18,19 +18,20 @@ mut:
 	get_prize(prize_id u64) !Prize
 	add_prize(starts string, first_dow int, goal int, star_val int) !
 	end_prize(prize_id u64) !
+	set_prize_goal(prize_id u64, goal int) !
 	get_star_count(prize_id u64) !int
 	get_stars(prize_id u64, from string, till string) ![]Star
 	get_stars_n(prize_id u64, n int) ![]Star
 	get_last_star(prize_id u64, typ int) !Star
 	get_deposits(prize_id u64) ![]Deposit
+	add_deposit(prize_id u64, at string, amount int, desc string) !
+	update_deposit(deposit_id u64, at string, amount int, desc string) !
 	set_star_got(prize_id u64, at string, typ int, got ?bool) !bool
 	add_star(prize_id u64, at string, typ int, got ?bool) !
 	delete_star(prize_id u64, at string, typ int) !
 	get_wins(prize_id u64, limit ?int) ![]Win
 	set_win(prize_id u64, at string, got bool) !
 	delete_win(prize_id u64, at string) !
-	add_deposit(prize_id u64, at string, amount int, desc string) !
-	update_deposit(deposit_id u64, at string, amount int, desc string) !
 }
 
 struct StoreImpl {
@@ -153,7 +154,14 @@ fn (mut s StoreImpl) end_prize(prize_id u64) ! {
 	sql s.db {
 		update Prize set end = now where id == prize_id && end is none
 	}!
-	s.cur_prize = none
+	s.cur_prize = none // invalidate cache
+}
+
+fn (mut s StoreImpl) set_prize_goal(prize_id u64, goal int) ! {
+	sql s.db {
+		update Prize set goal = goal where id == prize_id
+	}!
+	s.cur_prize = none // invalidate cache
 }
 
 fn (mut s StoreImpl) get_star_count(prize_id u64) !int {
@@ -201,9 +209,27 @@ fn (mut s StoreImpl) get_last_star(prize_id u64, typ int) !Star {
 
 fn (mut s StoreImpl) get_deposits(prize_id u64) ![]Deposit {
 	deposits := sql s.db {
-		select from Deposit where prize_id == prize_id
+		select from Deposit where prize_id == prize_id order by at
 	}!
 	return deposits
+}
+
+fn (mut s StoreImpl) add_deposit(prize_id u64, at string, amount int, desc string) ! {
+	deposit := Deposit{
+		at: at
+		amount: amount
+		prize_id: prize_id
+		desc: desc
+	}
+	sql s.db {
+		insert deposit into Deposit
+	}!
+}
+
+fn (mut s StoreImpl) update_deposit(deposit_id u64, at string, amount int, desc string) ! {
+	sql s.db {
+		update Deposit set at = at, amount = amount, desc = desc where id == deposit_id
+	}!
 }
 
 fn (mut s StoreImpl) set_star_got(prize_id u64, at string, typ int, got ?bool) !bool {
@@ -269,23 +295,5 @@ fn (mut s StoreImpl) set_win(prize_id u64, at string, got bool) ! {
 fn (mut s StoreImpl) delete_win(prize_id u64, at string) ! {
 	sql s.db {
 		delete from Win where prize_id == prize_id && at == at
-	}!
-}
-
-fn (mut s StoreImpl) add_deposit(prize_id u64, at string, amount int, desc string) ! {
-	deposit := Deposit{
-		at: at
-		amount: amount
-		prize_id: prize_id
-		desc: desc
-	}
-	sql s.db {
-		insert deposit into Deposit
-	}!
-}
-
-fn (mut s StoreImpl) update_deposit(deposit_id u64, at string, amount int, desc string) ! {
-	sql s.db {
-		update Deposit set at = at, amount = amount, desc = desc where id == deposit_id
 	}!
 }

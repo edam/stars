@@ -25,8 +25,8 @@ pub fn (mut c Client) info() ! {
 }
 
 fn draw_grand_prize(res api.ApiPrizeCur, res4 api.ApiStats) {
-	star_width := width * res.got.stars / res.goal
-	dep_width := width * res.got.deposits / res.goal
+	star_width := width * res.got.stars / res.prize.goal
+	dep_width := width * res.got.deposits / res.prize.goal
 	rem_width := width - star_width - dep_width
 
 	tline := bg(.yellow) + '▔'.repeat(star_width) + bg(.green) + '▔'.repeat(dep_width) + reset +
@@ -35,14 +35,14 @@ fn draw_grand_prize(res api.ApiPrizeCur, res4 api.ApiStats) {
 
 	info1 := ra(['${res.stars} stars', 'deposits'])
 	info2 := ra(['${res.got.stars / 100}', '${res.got.deposits / 100}'])
-	perc := 100.0 * f64(res.got.stars + res.got.deposits) / f64(res.goal)
+	perc := 100.0 * f64(res.got.stars + res.got.deposits) / f64(res.prize.goal)
 
 	prt('')
 	prt(lcr('ɢʀᴀɴᴅ ᴩʀɪᴢᴇ', '', '${perc:.0}%'))
 	prt('${tline}')
 	prt('${bline}')
 
-	remaining := f64(math.max(0, res.goal - res.got.stars - res.got.deposits))
+	remaining := f64(math.max(0, res.prize.goal - res.got.stars - res.got.deposits))
 	sample_start := time.parse('${res4.from} 00:00:00') or { time.now() }
 	sample_end := time.parse(('${res4.till} 23:59:59')) or { time.now() }
 	sample_dur := sample_end - sample_start
@@ -50,13 +50,8 @@ fn draw_grand_prize(res api.ApiPrizeCur, res4 api.ApiStats) {
 	est_end := time.now().add_days(int(est_days))
 	eta := '${est_end.day} ${month_names[est_end.month]}'
 
-	// println('remaining ${remaining}')
-	// println('sample ${sample_start} to ${sample_end}: ${res4.got.stars}')
-	// println('sample duration ${sample_dur}')
-	// println('est_days ${est_days}')
-	// println('est_end ${est_end}')
 	prt(lcr(fg(.yellow) + '${info1[0]} = £${info2[0]}' + reset, '', 'total ' + fg(.white) +
-		'£${(res.got.stars + res.got.deposits) / 100} / £${res.goal / 100}'))
+		'£${(res.got.stars + res.got.deposits) / 100} / £${res.prize.goal / 100}'))
 	prt(lcr(fg(.green) + '${info1[1]} = £${info2[1]}' + reset, '', 'ETA: ${eta}'))
 }
 

@@ -27,9 +27,9 @@ fn (mut c Client) auth() ! {
 	res := c.get[api.ApiAuth]('/api/auth/${c.user}')!
 
 	if res.api_version < api.api_version {
-		return error('server is out of date')
+		return error('api mismatch: client is newer than server')
 	} else if res.api_version > api.api_version {
-		return error('server is newer than client')
+		return error('api mismatch: server is newer than client')
 	}
 
 	c.session_ttl = if res.session_ttl > 0 { res.session_ttl } else { defaults.session_ttl }
@@ -48,41 +48,62 @@ fn (mut c Client) keep_alive() {
 }
 
 fn (mut c Client) get[T](uri string) !T {
-	return c.fetch[T](uri, .get)!
+	return c.fetch[T](uri, .get, none)!
 }
 
 fn (mut c Client) post[T](uri string) !T {
-	return c.fetch[T](uri, .post)!
+	return c.fetch[T](uri, .post, none)!
+}
+
+fn (mut c Client) post_json[T, U](uri string, data U) !T {
+	return c.fetch[T](uri, .post, json.encode(data))!
 }
 
 fn (mut c Client) delete[T](uri string) !T {
-	return c.fetch[T](uri, .delete)!
+	return c.fetch[T](uri, .delete, none)!
 }
 
 fn (mut c Client) put[T](uri string) !T {
-	return c.fetch[T](uri, .put)!
+	return c.fetch[T](uri, .put, none)!
 }
 
-fn (mut c Client) fetch[T](uri string, method http.Method) !T {
+fn (mut c Client) put_json[T, U](uri string, data U) !T {
+	return c.fetch[T](uri, .put, json.encode(data))!
+}
+
+fn (mut c Client) fetch[T](uri string, method http.Method, data ?string) !T {
 	mut cookies := map[string]string{}
 	if session_id := c.session_id {
 		cookies['session'] = session_id
 	}
 	url := 'http://${c.host}:${c.port}${uri}'
-	lock {
-		$if trace_stars ? {
-			verb := method.str().to_upper()
-			eprintln('${verb} ${url}')
+	$if trace_stars ? {
+		verb := method.str().to_upper()
+		eprintln('${verb} ${url}')
+		if data_ := data {
+			eprintln('-> ${data_}')
 		}
-		res := http.fetch(
-			method: method
-			url: url
-			cookies: cookies
-		)!
+	}
+	lock {
+		res := if data_ := data {
+			http.fetch(
+				method: method
+				url: url
+				cookies: cookies
+				data: data_
+				header: http.new_header(key: .content_type, value: 'application/json')
+			)!
+		} else {
+			http.fetch(
+				method: method
+				url: url
+				cookies: cookies
+			)!
+		}
 		match res.status_code {
 			200 {
 				$if trace_stars ? {
-					eprintln(res.body)
+					eprintln('<- ${res.body}')
 				}
 				return json.decode(T, res.body)!
 			}

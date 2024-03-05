@@ -1,6 +1,6 @@
 module api
 
-pub const api_version = 2
+pub const api_version = 3
 
 pub struct ApiAuth {
 pub:
@@ -11,23 +11,13 @@ pub:
 
 pub struct ApiPrizeCur {
 pub:
-	prize_id  u64
-	start     string
-	stars     int
-	goal      int
-	first_dow int
-	got       struct {
+	prize Api_Prize
+	stars int
+	got   struct {
 	pub:
 		stars    int
 		deposits int
 	}
-}
-
-pub struct Api_Star {
-pub:
-	at  string
-	typ int
-	got ?bool
 }
 
 pub struct ApiWeek {
@@ -40,22 +30,9 @@ pub:
 
 pub struct ApiOk {}
 
-pub struct Api_Deposit {
-pub:
-	at     string
-	amount int
-	desc   string
-}
-
 pub struct ApiDeposits {
 pub:
 	deposits []Api_Deposit
-}
-
-pub struct Api_Win {
-pub:
-	at  string
-	got bool
 }
 
 pub struct ApiWins {
@@ -69,6 +46,47 @@ pub:
 	users []Api_User
 }
 
+pub struct ApiStats {
+pub:
+	from string
+	till string
+	got  struct {
+	pub:
+		stars int
+	}
+}
+
+// objects
+
+pub struct Api_Prize {
+pub:
+	id        u64
+	star_val  int
+	goal      int
+	first_dow int
+	start     string
+}
+
+pub struct Api_Star {
+pub:
+	at  string
+	typ int
+	got ?bool
+}
+
+pub struct Api_Deposit {
+pub:
+	at     string
+	amount int
+	desc   string
+}
+
+pub struct Api_Win {
+pub:
+	at  string
+	got bool
+}
+
 pub struct Api_User {
 pub:
 	name  string
@@ -78,14 +96,4 @@ pub:
 pub struct Api_UserPerms {
 pub:
 	admin bool
-}
-
-pub struct ApiStats {
-pub:
-	from string
-	till string
-	got  struct {
-	pub:
-		stars int
-	}
 }
