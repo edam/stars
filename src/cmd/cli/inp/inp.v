@@ -13,6 +13,8 @@ pub:
 	width int = int(max_i32)
 	// can be empty?
 	required bool
+	// echo characters types
+	echo bool = true
 pub mut:
 	// validation function
 	validate_fn ?InputValidateFn
@@ -262,26 +264,29 @@ pub fn (mut i Input) read() !string {
 		r.disable_raw_mode()
 	}
 
+	Stage.set_echo(i.echo)
+	defer {
+		Stage.set_echo(true)
+		if i.emit_newline {
+			Stage.newln()
+		}
+	}
+
 	Stage.print(i.val.string())
 	$if debug_inp ? {
 		print('=R_p${width(i.val)}=')
 		defer {
-			if i.emit_newline {
-				Stage.newln()
-			} else {
+			if !i.emit_newline {
 				w := width(i.val#[..i.cur])
-				Stage.newln()
+				println()
 				println('=/R_m${-w}=')
 			}
 		}
-	} $else {
-		defer {
-			if i.emit_newline {
-				Stage.newln()
-			} else {
-				w := width(i.val#[..i.cur])
-				Stage.move(-w)
-			}
+	}
+	defer {
+		if !i.emit_newline {
+			w := width(i.val#[..i.cur])
+			Stage.move(-w)
 		}
 	}
 	val_w := width(i.val)

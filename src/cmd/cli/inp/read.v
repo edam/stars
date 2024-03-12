@@ -130,9 +130,17 @@ pub fn read_opt(prompt string, init ?string, opts []string) !string {
 	}
 	sel := input.read()!
 	idx := opts.index(sel)
-	if sel == '' || idx == -1 {
+	if idx == -1 {
 		return error('bad selection')
 	} else {
 		return sel
 	}
+}
+
+pub fn read_password(prompt string) !string {
+	print(prompt)
+	mut input := Input{
+		echo: false
+	}
+	return input.read()!
 }

@@ -5,7 +5,8 @@ import encoding.utf8.east_asian
 
 struct Stage {
 mut:
-	cur int // new cur
+	cur  int // new cur
+	echo bool = true
 	// off int // offset to buf
 	// buf []rune
 }
@@ -27,22 +28,31 @@ pub fn width(runes []rune) int {
 
 // move cursor forward/backward
 pub fn Stage.move(n int) {
-	Stage.get().cur += n
+	if Stage.get().echo {
+		Stage.get().cur += n
+	}
 }
 
 // stage print
 pub fn Stage.print(s string) {
-	Stage.flush()
-	print(s)
+	if Stage.get().echo {
+		Stage.flush()
+		print(s)
+	}
 }
 
 // stage print newline
 pub fn Stage.newln() {
-	println('')
+	if Stage.get().echo {
+		println('')
+	}
 }
 
 // render stage to terminal
 pub fn Stage.flush() {
+	if !Stage.get().echo {
+		return
+	}
 	// stage := Stage.get()
 	// if stage.off > 0 {
 	//	term.cursor_forward(stage.off)
@@ -70,4 +80,11 @@ pub fn Stage.reset() {
 	stage.cur = 0
 	// stage.off = 0
 	// stage.buf = []
+}
+
+pub fn Stage.set_echo(echo bool) {
+	if Stage.get().echo && !echo {
+		Stage.flush()
+	}
+	Stage.get().echo = echo
 }
