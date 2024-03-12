@@ -2,7 +2,7 @@ module store
 
 import crypto.sha256
 
-fn (mut s StoreImpl) verify() ! {
+fn (mut s Store) verify() ! {
 	println('db: checking schema')
 	conf := sql s.db {
 		select from Conf where key == 'version'
@@ -30,14 +30,14 @@ fn (mut s StoreImpl) verify() ! {
 	}
 }
 
-fn (mut s StoreImpl) upgrade(version int) ! {
+fn (mut s Store) upgrade(version int) ! {
 	match version {
 		2 { s.upgrade_2()! }
 		else { return error('unknown version: ${version}') }
 	}
 }
 
-fn (mut s StoreImpl) upgrade_2() ! {
+fn (mut s Store) upgrade_2() ! {
 	users := sql s.db {
 		select from User
 	}!

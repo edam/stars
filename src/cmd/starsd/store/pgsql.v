@@ -3,11 +3,11 @@ module store
 import db.pg
 
 struct PgsqlDB {
-	StoreImpl
+	Store
 }
 
 // pub fn PgsqlDB.new(path string) !&PgsqlDB {
-pub fn new_pgsql(host string, port int, username string, password string, dbname string) !&Store {
+pub fn new_pgsql(host string, port int, username string, password string, dbname string) !&IStore {
 	db := pg.connect(pg.Config{
 		host: host
 		port: port

@@ -9,8 +9,8 @@ fn main() {
 	mut client := cmds.Client{
 		host: args.host
 		port: args.port
-		user: args.user
-		pw: args.pw
+		username: args.user
+		password: args.pw
 		eta_stars: args.eta_stars
 	}
 

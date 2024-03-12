@@ -9,10 +9,10 @@ pub fn (mut c Client) info() ! {
 	sw := time.new_stopwatch()
 	c.auth()!
 
-	res1 := c.get[api.ApiPrizeCur]('/api/prize/cur')!
-	res2 := c.get[api.ApiWeek]('/api/prize/cur/week/cur')!
-	res3 := c.get[api.ApiWins]('/api/prize/cur/wins')!
-	res4 := c.get[api.ApiStats]('/api/prize/cur/stats/${c.eta_stars}')!
+	res1 := c.get[api.GetPrizesCur]('/api/prizes/cur')!
+	res2 := c.get[api.GetPrizesWeeks]('/api/prizes/cur/weeks/cur')!
+	res3 := c.get[api.GetPrizesWins]('/api/prizes/cur/wins')!
+	res4 := c.get[api.GetPrizesStats]('/api/prizes/cur/stats/${c.eta_stars}')!
 
 	prt('')
 	prt(lcr(faint + '~', fg(.white) + stars_title, faint + '~'))
@@ -24,7 +24,7 @@ pub fn (mut c Client) info() ! {
 	draw_server_line(c.host, sw.elapsed().milliseconds())
 }
 
-fn draw_grand_prize(res api.ApiPrizeCur, res4 api.ApiStats) {
+fn draw_grand_prize(res api.GetPrizesCur, res4 api.GetPrizesStats) {
 	star_width := width * res.got.stars / res.prize.goal
 	dep_width := width * res.got.deposits / res.prize.goal
 	rem_width := width - star_width - dep_width
@@ -42,13 +42,17 @@ fn draw_grand_prize(res api.ApiPrizeCur, res4 api.ApiStats) {
 	prt('${tline}')
 	prt('${bline}')
 
-	remaining := f64(math.max(0, res.prize.goal - res.got.stars - res.got.deposits))
-	sample_start := time.parse('${res4.from} 00:00:00') or { time.now() }
-	sample_end := time.parse(('${res4.till} 23:59:59')) or { time.now() }
-	sample_dur := sample_end - sample_start
-	est_days := sample_dur.days() * (remaining / f64(res4.got.stars))
-	est_end := time.now().add_days(int(est_days))
-	eta := '${est_end.day} ${month_names[est_end.month]}'
+	eta := if res4.got.stars == 0 {
+		'n/a'
+	} else {
+		remaining := f64(math.max(0, res.prize.goal - res.got.stars - res.got.deposits))
+		sample_start := time.parse('${res4.from} 00:00:00') or { time.now() }
+		sample_end := time.parse(('${res4.till} 23:59:59')) or { time.now() }
+		sample_dur := sample_end - sample_start
+		est_days := sample_dur.days() * (remaining / f64(res4.got.stars))
+		est_end := time.now().add_days(int(est_days))
+		'${est_end.day} ${month_names[est_end.month]}'
+	}
 
 	prt(lcr(fg(.yellow) + '${info1[0]} = £${info2[0]}' + reset, '', 'total ' + fg(.white) +
 		'£${(res.got.stars + res.got.deposits) / 100} / £${res.prize.goal / 100}'))
@@ -73,7 +77,7 @@ const this_week = 'ᴛʜɪꜱ ᴡᴇᴇᴋ'
 const last_week = 'ʟᴀꜱᴛ ᴡᴇᴇᴋ'
 const latest = 'ʟᴀᴛᴇꜱᴛ'
 
-fn draw_weekly_stars(week string, res api.ApiWeek) {
+fn draw_weekly_stars(week string, res api.GetPrizesWeeks) {
 	mut regular := 0
 	mut bonus := []int{}
 	for star in res.stars {

@@ -3,11 +3,11 @@ module store
 import db.sqlite
 
 struct SqliteDB {
-	StoreImpl
+	Store
 }
 
 // pub fn SqliteD.new(path string) !&SqliteDB {
-pub fn new_sqlite(path string) !&Store {
+pub fn new_sqlite(path string) !&IStore {
 	db := sqlite.connect(path)!
 	return &SqliteDB{
 		db: db

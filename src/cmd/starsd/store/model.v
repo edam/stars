@@ -52,13 +52,13 @@ pub:
 @[table: users]
 pub struct User {
 pub:
-	id    u64    @[primary; sql: serial]
-	name  string
-	psk   string
-	perms u32
+	id       u64    @[primary; sql: serial]
+	username string @[sql: 'name'] // TODO: update schema and rename
+	psk      string
+	perms    u32
 }
 
 // --
 
 pub const not_found = error('not found')
-pub const multiple = error('more than one found')
+pub const multiple_found = error('multiple found')

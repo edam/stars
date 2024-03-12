@@ -46,16 +46,16 @@ const perm_admin = 1
 @[table: sessions]
 struct Session {
 pub:
-	id      string    @[primary]
-	user_id u64
-	at      time.Time
-	perms   u32
+	id       string    @[primary]
+	username string
+	at       time.Time
+	perms    u32
 }
 
-fn (mut s Sessions) add(session_id string, user_id u64, perms u32) ! {
+fn (mut s Sessions) add(session_id string, username string, perms u32) ! {
 	session := Session{
 		id: session_id
-		user_id: user_id
+		username: username
 		at: time.now()
 		perms: perms
 	}

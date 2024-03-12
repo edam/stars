@@ -8,11 +8,11 @@ pub fn (mut c Client) wins() ! {
 	sw := time.new_stopwatch()
 	c.auth()!
 
-	res := c.get[api.ApiWins]('/api/prize/cur/wins/all')!
+	res := c.get[api.GetPrizesWins]('/api/prizes/cur/wins/all')!
 
 	prt('')
 	prt(lcr('ᴍᴏɴᴛʜʟʏ ᴍᴇᴅᴀʟꜱ', '', 'ʙᴏɴᴜꜱ '))
-	mut wins := []api.Api_Win{}
+	mut wins := []api.Win{}
 	mut count := 0
 	for win in res.wins {
 		wins << win
@@ -29,7 +29,7 @@ pub fn (mut c Client) wins() ! {
 	draw_server_line(c.host, sw.elapsed().milliseconds())
 }
 
-fn draw_month_of_wins(wins []api.Api_Win, bonus_at ?string) {
+fn draw_month_of_wins(wins []api.Win, bonus_at ?string) {
 	num_got := wins.filter(it.got).len
 	num := wins.len + (4 - num_got)
 	bonus := if at := bonus_at { faint + '  ${at} ' + reset } else { '' }

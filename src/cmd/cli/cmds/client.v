@@ -12,19 +12,19 @@ import math
 pub struct Client {
 	host      string
 	port      int
-	user      string
-	pw        string
+	username  string
 	eta_stars int
 mut:
+	password    string
 	session_id  ?string
 	session_ttl int
 }
 
 fn (mut c Client) auth() ! {
-	if c.user == '' || c.pw == '' {
+	if c.username == '' || c.password == '' {
 		die('username and pre-shared key required')
 	}
-	res := c.get[api.ApiAuth]('/api/auth/${c.user}')!
+	res := c.get[api.GetAuth]('/api/auth/${c.username}')!
 
 	if res.api_version < api.api_version {
 		return error('api mismatch: client is newer than server')
@@ -34,7 +34,7 @@ fn (mut c Client) auth() ! {
 
 	c.session_ttl = if res.session_ttl > 0 { res.session_ttl } else { defaults.session_ttl }
 
-	psk := sha256.hexhash(c.pw)
+	psk := sha256.hexhash(c.password)
 	c.session_id = sha256.hexhash('${psk}:${res.challenge}')
 }
 
@@ -42,7 +42,7 @@ fn (mut c Client) keep_alive() {
 	go fn [mut c] () {
 		for {
 			time.sleep(time.second * math.max(0, c.session_ttl - 5))
-			c.get[api.ApiOk]('/api/ping') or { break }
+			c.get[api.Ok]('/api/ping') or { break }
 		}
 	}()
 }
@@ -72,9 +72,9 @@ fn (mut c Client) put_json[T, U](uri string, data U) !T {
 }
 
 fn (mut c Client) fetch[T](uri string, method http.Method, data ?string) !T {
-	mut cookies := map[string]string{}
+	mut header := http.Header{}
 	if session_id := c.session_id {
-		cookies['session'] = session_id
+		header.set_custom('X-Stars-Auth', session_id)!
 	}
 	url := 'http://${c.host}:${c.port}${uri}'
 	$if trace_stars ? {
@@ -86,25 +86,29 @@ fn (mut c Client) fetch[T](uri string, method http.Method, data ?string) !T {
 	}
 	lock {
 		res := if data_ := data {
+			header.set(.content_type, 'application/json')
 			http.fetch(
 				method: method
 				url: url
-				cookies: cookies
+				header: header
 				data: data_
-				header: http.new_header(key: .content_type, value: 'application/json')
 			)!
 		} else {
 			http.fetch(
 				method: method
 				url: url
-				cookies: cookies
+				header: header
 			)!
+		}
+		$if trace_stars ? {
+			if res.status_code == 200 {
+				eprintln('<- ${res.body}')
+			} else {
+				eprintln('<- ${res.status_code} ${res.body}')
+			}
 		}
 		match res.status_code {
 			200 {
-				$if trace_stars ? {
-					eprintln('<- ${res.body}')
-				}
 				return json.decode(T, res.body)!
 			}
 			403 {

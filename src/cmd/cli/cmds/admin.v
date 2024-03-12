@@ -4,6 +4,9 @@ import api
 import term
 import util
 import inp
+import rand
+import crypto.aes
+import crypto.sha256
 
 const dow_names = ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
@@ -16,7 +19,7 @@ fn menu_quit(mut c Client) ! {
 
 fn menu_nop(mut c Client) ! {
 	term.clear_previous_line()
-	// returns `return`, so previous menu needs to handle returns!
+	// on return, errors `return`, so previous menu needs to handle returns!
 }
 
 fn menu_sure(sure_fn MenuFn) MenuFn {
@@ -31,7 +34,7 @@ fn menu_sure(sure_fn MenuFn) MenuFn {
 
 pub fn (mut c Client) admin() ! {
 	println(fg(.white) + '𝕊𝕋𝔸ℝ𝕊 𝔸𝔻𝕄𝕀ℕ ' + faint + '- ' + reset +
-		fg(.blue) + '${c.user}@${c.host}' + reset)
+		fg(.blue) + '${c.username}@${c.host}' + reset)
 	c.auth()!
 	c.keep_alive()
 	for {
@@ -42,6 +45,7 @@ pub fn (mut c Client) admin() ! {
 			MenuItem{'deposits', menu_deposit},
 			MenuItem{'setup prizes', menu_prizes},
 			MenuItem{'setup users', menu_users},
+			MenuItem{'change password', menu_change_password(c.username)},
 			MenuItem{'quit', menu_quit},
 		]) or {
 			if err.str() == 'back' || err.str() == 'aborted' {
@@ -59,7 +63,7 @@ pub fn (mut c Client) admin() ! {
 fn menu_stars_set(when ?string) MenuFn {
 	when_ := when or { 'latest' }
 	return fn [when_] (mut c Client) ! {
-		cur := c.get[api.ApiWeek]('/api/prize/cur/week/${when_}')!
+		cur := c.get[api.GetPrizesWeeks]('/api/prizes/cur/weeks/${when_}')!
 		mut menu := []MenuItem{}
 		mut idx := -1
 		for i, star in cur.stars {
@@ -135,7 +139,7 @@ fn menu_star_got_set(typ int, got string, date &string) MenuFn {
 	return fn [typ, got, date] (mut c Client) ! {
 		typ_name := if typ > 0 { 'B${typ}' } else { 'daily' }
 		println('setting ${typ_name} star for \'${*date}\' to ${got}')
-		c.put[api.ApiOk]('/api/admin/prize/cur/star/${*date}/${typ}/${got}')!
+		c.put[api.Ok]('/api/admin/prizes/cur/stars/${*date}/${typ}/${got}')!
 	}
 }
 
@@ -143,7 +147,7 @@ fn menu_weeklywin(mut c Client) ! {
 	mut date := ''
 	pdate := &date
 	for {
-		res := c.get[api.ApiWins]('/api/prize/cur/wins/all')!
+		res := c.get[api.GetPrizesWins]('/api/prizes/cur/wins/all')!
 		mut last := ''
 		mut week := ''
 		if res.wins.len > 0 {
@@ -206,7 +210,7 @@ fn menu_weeklywin_skip(pdate &string) MenuFn {
 fn menu_weeklywin_next_set_got(pdate &string, got string) MenuFn {
 	return fn [pdate, got] (mut c Client) ! {
 		println('setting next win to ${got}')
-		c.post[api.ApiOk]('/api/admin/prize/cur/win/${*pdate}/${got}')!
+		c.post[api.Ok]('/api/admin/prizes/cur/wins/${*pdate}/${got}')!
 		unsafe {
 			*pdate = ''
 		}
@@ -216,7 +220,7 @@ fn menu_weeklywin_next_set_got(pdate &string, got string) MenuFn {
 fn menu_weeklywin_last_delete(pdate &string, date string) MenuFn {
 	return fn [pdate, date] (mut c Client) ! {
 		println('deleting last win')
-		c.delete[api.ApiOk]('/api/admin/prize/cur/win/${date}')!
+		c.delete[api.Ok]('/api/admin/prizes/cur/wins/${date}')!
 		unsafe {
 			*pdate = ''
 		}
@@ -224,7 +228,7 @@ fn menu_weeklywin_last_delete(pdate &string, date string) MenuFn {
 }
 
 // [][ date, got, typ ]
-fn menu_starweek_parse_stars(from string, stars []api.Api_Star) ![][]string {
+fn menu_starweek_parse_stars(from string, stars []api.Star) ![][]string {
 	mut typs := [0]
 	for star in stars {
 		if star.typ !in typs {
@@ -269,13 +273,13 @@ fn menu_starweek() MenuFn {
 	pidx := &idx
 	return fn [pwhen, pidx] (mut c Client) ! {
 		for {
-			prize_res := c.get[api.ApiPrizeCur]('/api/prize/cur')!
-			res := c.get[api.ApiWeek]('/api/prize/cur/week/${*pwhen}')!
+			prize_res := c.get[api.GetPrizesCur]('/api/prizes/cur')!
+			res := c.get[api.GetPrizesWeeks]('/api/prizes/cur/weeks/${*pwhen}')!
 			unsafe {
 				*pwhen = res.from
 			}
 			stars_fn := fn [pwhen] (mut c Client) ! {
-				res := c.get[api.ApiWeek]('/api/prize/cur/week/${*pwhen}')!
+				res := c.get[api.GetPrizesWeeks]('/api/prizes/cur/weeks/${*pwhen}')!
 				mut stars := ''
 				for pair in menu_starweek_parse_stars(*pwhen, res.stars)! {
 					info := if pair[2].int() > 0 { '-B${pair[2]}' } else { '' }
@@ -328,10 +332,10 @@ fn menu_starweek_move(pwhen &string, next bool, prize_start ?string) MenuFn {
 
 fn menu_setup_week_edit(pwhen &string) MenuFn {
 	return fn [pwhen] (mut c Client) ! {
-		prize_res := c.get[api.ApiPrizeCur]('/api/prize/cur')!
+		prize_res := c.get[api.GetPrizesCur]('/api/prizes/cur')!
 		mut idx := 0
 		for {
-			res := c.get[api.ApiWeek]('/api/prize/cur/week/${*pwhen}')!
+			res := c.get[api.GetPrizesWeeks]('/api/prizes/cur/weeks/${*pwhen}')!
 			mut menu := []MenuItem{}
 			mut bonus_stars := ''
 			mut bonus_num := 0
@@ -375,7 +379,7 @@ fn menu_setup_week_edit(pwhen &string) MenuFn {
 fn menu_setup_week_add(idx &int, typ int, date string) MenuFn {
 	return fn [idx, typ, date] (mut c Client) ! {
 		term.clear_previous_line()
-		c.post[api.ApiOk]('/api/admin/prize/cur/star/${date}/${typ}')!
+		c.post[api.Ok]('/api/admin/prizes/cur/stars/${date}/${typ}')!
 		unsafe {
 			(*idx)++
 		}
@@ -385,7 +389,7 @@ fn menu_setup_week_add(idx &int, typ int, date string) MenuFn {
 fn menu_setup_week_delete(idx &int, typ int, date string) MenuFn {
 	return fn [idx, typ, date] (mut c Client) ! {
 		term.clear_previous_line()
-		c.delete[api.ApiOk]('/api/admin/prize/cur/star/${date}/${typ}')!
+		c.delete[api.Ok]('/api/admin/prizes/cur/stars/${date}/${typ}')!
 		unsafe {
 			(*idx)++
 		}
@@ -398,11 +402,11 @@ fn menu_setup_week_bonus_stars(date string, num_bonus int) MenuFn {
 		num := inp.read_int('num bonus stars: ', suggested)!
 		if num < num_bonus {
 			for typ := num_bonus; typ > num; typ-- {
-				c.delete[api.ApiOk]('/api/admin/prize/cur/star/${date}/${typ}')!
+				c.delete[api.Ok]('/api/admin/prizes/cur/stars/${date}/${typ}')!
 			}
 		} else if num > num_bonus {
 			for typ := num_bonus + 1; typ <= num; typ++ {
-				c.post[api.ApiOk]('/api/admin/prize/cur/star/${date}/${typ}')!
+				c.post[api.Ok]('/api/admin/prizes/cur/stars/${date}/${typ}')!
 			}
 		}
 	}
@@ -412,7 +416,7 @@ fn menu_deposit(mut c Client) ! {
 	do_menu(mut c, [
 		MenuItem{'add deposit', menu_deposit_add},
 		// MenuItem{'edit_deposit', menu_deposit_edit()},
-		// MenuItem{'delete_deposit', menu_deposit_delete},
+		MenuItem{'delete deposit', menu_deposit_delete},
 	])!
 }
 
@@ -421,16 +425,36 @@ fn menu_deposit_add(mut c Client) ! {
 	amount := inp.read_int('amount (in pence): ', none)!
 	desc := inp.read_string('description: ', none)!
 	println('adding deposit')
-	c.post_json[api.ApiOk, api.Api_Deposit]('/api/admin/prize/cur/deposit', api.Api_Deposit{
+	c.post_json[api.Ok, api.Deposit]('/api/admin/prizes/cur/deposits', api.Deposit{
 		at: date
 		amount: amount
 		desc: desc
 	})!
 }
 
+fn menu_deposit_delete(mut c Client) ! {
+	deps := c.get[api.GetPrizesDeposits]('/api/prizes/cur/deposits')!
+	if deps.deposits.len == 0 {
+		println('no deposits')
+		return
+	}
+	mut menu := []MenuItem{}
+	for dep in deps.deposits {
+		menu << MenuItem{'delete £${dep.amount / 100:.2} "${dep.desc}" (${dep.at})', menu_sure(menu_deposit_delete_id(dep.id))}
+	}
+	do_menu(mut c, menu)!
+}
+
+fn menu_deposit_delete_id(id u64) MenuFn {
+	return fn [id] (mut c Client) ! {
+		println('deleting deposit')
+		c.delete[api.Ok]('/api/admin/prizes/cur/deposits/${id}')!
+	}
+}
+
 fn menu_prizes(mut c Client) ! {
 	mut menu := []MenuItem{}
-	if res := c.get[api.ApiPrizeCur]('/api/prize/cur') {
+	if res := c.get[api.GetPrizesCur]('/api/prizes/cur') {
 		dow_s := cmds.dow_names[res.prize.first_dow]
 		dow_e := cmds.dow_names[(res.prize.first_dow + 5) % 7 + 1]
 		got := res.got.deposits + res.got.stars
@@ -458,14 +482,14 @@ fn menu_prizes_add(mut c Client) ! {
 	menu_sure(menu_prizes_add_sure(starts, first_dow, goal, star_val))(mut c)!
 	// menu_sure(fn [starts, first_dow, goal, star_val] (mut c Client) ! {
 	//	println('adding prize')
-	//	c.post[api.ApiOk]('/api/admin/prizes/${starts}/${first_dow}/${goal}/${star_val}')!
+	//	c.post[api.Ok]('/api/admin/prizes/${starts}/${first_dow}/${goal}/${star_val}')!
 	//})(mut c)!
 }
 
 fn menu_prizes_add_sure(starts string, first_dow int, goal int, star_val int) MenuFn {
 	return fn [starts, first_dow, goal, star_val] (mut c Client) ! {
 		println('adding prize')
-		c.post_json[api.ApiOk, api.Api_Prize]('/api/admin/prize', api.Api_Prize{
+		c.post_json[api.Ok, api.Prize]('/api/admin/prizes', api.Prize{
 			star_val: star_val
 			goal: goal
 			first_dow: first_dow
@@ -476,7 +500,7 @@ fn menu_prizes_add_sure(starts string, first_dow int, goal int, star_val int) Me
 
 fn menu_prizes_end(mut c Client) ! {
 	println('ending current prize')
-	c.delete[api.ApiOk]('/api/admin/prize/cur')!
+	c.delete[api.Ok]('/api/admin/prizes/cur')!
 }
 
 fn menu_prizes_modify_goal(goal int, got int) MenuFn {
@@ -492,37 +516,89 @@ fn menu_prizes_modify_goal(goal int, got int) MenuFn {
 fn menu_prize_modify_goal_sure(new_goal int) MenuFn {
 	return fn [new_goal] (mut c Client) ! {
 		println('setting goal')
-		c.put[api.ApiOk]('/api/admin/prize/cur/goal/${new_goal}')!
+		c.put[api.Ok]('/api/admin/prizes/cur/goals/${new_goal}')!
 	}
 }
 
 fn menu_users(mut c Client) ! {
 	mut menu := []MenuItem{}
-	res := c.get[api.ApiUsers]('/api/admin/users')!
+	res := c.get[api.GetAdminUsers]('/api/admin/users')!
 	for user in res.users {
-		menu << MenuItem{'🧑 ${user.name}', menu_user_edit(user)}
+		icon := if user.perms.admin { '🧔‍♂️' } else { '👦' }
+		menu << MenuItem{'${icon} ${user.username}', menu_user_edit(user)}
 	}
 	menu << MenuItem{'add user', menu_user_add}
 	do_menu(mut c, menu)!
 }
 
-fn menu_user_edit(user api.Api_User) MenuFn {
+fn menu_user_edit(user api.User) MenuFn {
 	return fn [user] (mut c Client) ! {
 		do_menu(mut c, [
-			// MenuItem{'set password', menu_user_edit_password()},
+			MenuItem{'set password', menu_change_password(user.username)},
 			// MenuItem{'set permissions', menu_user_set_perms(user)},
 			MenuItem{'delete', menu_sure(menu_user_delete(user))},
 		])!
 	}
 }
 
-fn menu_user_delete(user api.Api_User) MenuFn {
+fn menu_user_delete(user api.User) MenuFn {
 	return fn [user] (mut c Client) ! {
-		println('deleting user ${user.name}')
-		c.delete[api.ApiOk]('/api/admin/user/${user.name}')!
+		println('deleting user ${user.username}')
+		c.delete[api.Ok]('/api/admin/users/${user.username}')!
 	}
 }
 
 fn menu_user_add(mut c Client) ! {
-	println('not implemented')
+	username := inp.read_string('username: ', none)!
+	admin := inp.read_opt('admin? [y/N] ', none, ['y', 'n', ''])! == 'y'
+	// TODO: embed, once closures work here...
+	menu_sure(menu_user_add_sure(username, admin))(mut c)!
+}
+
+fn menu_user_add_sure(username string, admin bool) MenuFn {
+	return fn [username, admin] (mut c Client) ! {
+		password := rand.uuid_v4().replace('-', '')#[-12..]
+		println('adding ${username}, password ${password}')
+		pskclear := sha256.sum(password.bytes())
+		// use current user's psk (a 32-byte sha256 of password) as aes256 key
+		// to encrypt new user's psk (a sha256 of password)
+		cipher := aes.new_cipher(sha256.sum(c.password.bytes()))
+		mut pskenc := []u8{len: pskclear.len, cap: pskclear.len}
+		cipher.encrypt(mut pskenc, pskclear)
+		cipher.encrypt(mut pskenc[16..], pskclear[16..])
+		c.post_json[api.Ok, api.User]('/api/admin/users', api.User{
+			username: username
+			psk: pskenc.hex()
+			perms: api.UserPerms{
+				admin: admin
+			}
+		})!
+	}
+}
+
+fn menu_change_password(username string) MenuFn {
+	return fn [username] (mut c Client) ! {
+		println('user: ${username}')
+		password := inp.read_password('new password: ')!
+		confirm := inp.read_password('confirm password: ')!
+		if password != confirm {
+			println('passwords do not match')
+			return
+		}
+		pskclear := sha256.sum(password.bytes())
+		println('psk ${pskclear.hex()}')
+		// use current user's psk (a 32-byte sha256 of password) as aes256 key
+		// to encrypt new user's psk (a sha256 of password)
+		cipher := aes.new_cipher(sha256.sum(c.password.bytes()))
+		mut pskenc := []u8{len: pskclear.len, cap: pskclear.len}
+		cipher.encrypt(mut pskenc, pskclear)
+		cipher.encrypt(mut pskenc[16..], pskclear[16..])
+		c.put_json[api.Ok, api.PutAdminUsersReq]('/api/admin/users/${username}', api.PutAdminUsersReq{
+			psk: pskenc.hex()
+		})!
+		// update client
+		if username == c.username {
+			c.password = password
+		}
+	}
 }

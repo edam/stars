@@ -3,7 +3,7 @@ module cmds
 import time
 import api
 
-fn draw_deposits(res api.ApiDeposits) {
+fn draw_deposits(res api.GetPrizesDeposits) {
 	prt('')
 	prt('ᴅᴇᴩᴏꜱɪᴛꜱ')
 	prt('▔'.repeat(width))
@@ -20,7 +20,7 @@ fn draw_deposits(res api.ApiDeposits) {
 pub fn (mut c Client) deposits() ! {
 	sw := time.new_stopwatch()
 	c.auth()!
-	res := c.get[api.ApiDeposits]('/api/prize/cur/deposits')!
+	res := c.get[api.GetPrizesDeposits]('/api/prizes/cur/deposits')!
 	draw_deposits(res)
 	draw_server_line(c.host, sw.elapsed().milliseconds())
 }

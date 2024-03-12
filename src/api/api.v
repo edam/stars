@@ -1,17 +1,19 @@
 module api
 
-pub const api_version = 3
+pub const api_version = 4
 
-pub struct ApiAuth {
+pub struct Ok {}
+
+pub struct GetAuth {
 pub:
 	challenge   string
 	session_ttl int
 	api_version int
 }
 
-pub struct ApiPrizeCur {
+pub struct GetPrizesCur {
 pub:
-	prize Api_Prize
+	prize Prize
 	stars int
 	got   struct {
 	pub:
@@ -20,33 +22,26 @@ pub:
 	}
 }
 
-pub struct ApiWeek {
+pub struct GetPrizesWeeks {
 pub:
-	stars []Api_Star
+	stars []Star
 
 	from string
 	till string
 }
 
-pub struct ApiOk {}
-
-pub struct ApiDeposits {
+pub struct GetPrizesDeposits {
 pub:
-	deposits []Api_Deposit
+	deposits []Deposit
 }
 
-pub struct ApiWins {
+pub struct GetPrizesWins {
 pub:
-	wins []Api_Win
+	wins []Win
 	next string
 }
 
-pub struct ApiUsers {
-pub:
-	users []Api_User
-}
-
-pub struct ApiStats {
+pub struct GetPrizesStats {
 pub:
 	from string
 	till string
@@ -56,9 +51,19 @@ pub:
 	}
 }
 
+pub struct GetAdminUsers {
+pub:
+	users []User
+}
+
+pub struct PutAdminUsersReq {
+pub:
+	psk ?string
+}
+
 // objects
 
-pub struct Api_Prize {
+pub struct Prize {
 pub:
 	id        u64
 	star_val  int
@@ -67,33 +72,35 @@ pub:
 	start     string
 }
 
-pub struct Api_Star {
+pub struct Star {
 pub:
 	at  string
 	typ int
 	got ?bool
 }
 
-pub struct Api_Deposit {
+pub struct Deposit {
 pub:
+	id     u64
 	at     string
 	amount int
 	desc   string
 }
 
-pub struct Api_Win {
+pub struct Win {
 pub:
 	at  string
 	got bool
 }
 
-pub struct Api_User {
+pub struct User {
 pub:
-	name  string
-	perms Api_UserPerms
+	username string
+	psk      ?string
+	perms    UserPerms
 }
 
-pub struct Api_UserPerms {
+pub struct UserPerms {
 pub:
 	admin bool
 }
