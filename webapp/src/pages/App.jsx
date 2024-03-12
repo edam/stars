@@ -7,7 +7,7 @@ export function App() {
   const { loggedIn } = useContext( AuthContext );
 
   return (
-    <div className="bg-stone-200 min-h-screen">
+    <div>
       {
         loggedIn? (
           <MainPage />
