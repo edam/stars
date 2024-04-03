@@ -33,16 +33,21 @@ pub fn (mut app App) run() {
 
 	match app.args.db.backend {
 		'sqlite' {
-			app.db = store.new_sqlite(app.args.db.file or { '' }) or { die('db: ${err}') }
+			file := app.args.db.file or { '' }
+			println('store: sqlite:///${file}')
+			app.db = store.new_sqlite(file) or { die('db: ${err}') }
 		}
 		'pgsql' {
-			app.db = store.new_pgsql(app.args.db.host or { '' }, app.args.db.port or { 0 },
-				app.args.db.username or { '' }, app.args.db.password or { '' }, app.args.db.name or {
-				''
-			}) or { die('db: ${err}') }
+			host := app.args.db.host or { '' }
+			port := app.args.db.port or { 0 }
+			username := app.args.db.username or { '' }
+			password := app.args.db.password or { '' }
+			name := app.args.db.name or { '' }
+			println('store: pgsql://${username}@${host}:${port}/${name}')
+			app.db = store.new_pgsql(host, port, username, password, name) or { die('db: ${err}') }
 		}
 		else {
-			die('unsupported database')
+			die('store: unsupported database')
 		}
 	}
 	defer {
@@ -50,10 +55,12 @@ pub fn (mut app App) run() {
 	}
 
 	if app.args.create {
+		println('creating database')
 		app.db.create() or { die('db: ${err}') }
 	}
 	app.db.verify() or { die('db: ${err}') }
 	if app.args.create || app.args.reset_admin {
+		println('resetting admin account')
 		pw := rand.u64().str()
 		psk := sha256.hexhash(pw)
 		app.db.put_user(admin_user, psk) or { die('db: ${err}') }
@@ -62,6 +69,7 @@ pub fn (mut app App) run() {
 		exit(0)
 	}
 
+	println('conf: session_ttl = ${app.args.session_ttl}')
 	app.sessions = Sessions.new(app.args.session_ttl) or { die('sessions init fail') }
 
 	app.use(vweb.cors[Context](vweb.CorsOptions{

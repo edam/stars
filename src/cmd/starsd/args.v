@@ -37,22 +37,22 @@ pub mut:
 
 const options = [
 	ggetopt.text('Usage: ${ggetopt.prog()} [OPTION]...'),
-	ggetopt.text(''),
+	ggetopt.text(),
 	ggetopt.text('Options:'),
 	ggetopt.opt('conf', `c`).arg('FILE', true)
 		.help('configuration file [${default_conf}]'),
 	ggetopt.opt('db', none).arg('FILE', true)
 		.help('sqlite database file'),
 	ggetopt.opt('create', none)
-		.help('create database schema'),
-	ggetopt.opt('reset-admin', none)
-		.help('reset admin user/password (also done with --create)'),
+		.help('create database schema (implies --reset-admin)'),
 	ggetopt.opt('port', `p`).arg('PORT', true)
 		.help('listening port [${default_port}]'),
+	ggetopt.opt('reset-admin', none)
+		.help('reset admin account/password and exit'),
 	ggetopt.opt('session-ttl', none).arg('S', true)
 		.help('auth sessions TTL [${defaults.session_ttl}]'),
 	ggetopt.opt_help(),
-	ggetopt.text(''),
+	ggetopt.text(),
 	ggetopt.text('Database options:'),
 	// ggetopt.opt('db', none).arg('URL', true)
 	//	.help('whole database spec\nformat: TYPE://USER:PASS@HOST:PORT/FILE'),
@@ -90,14 +90,14 @@ fn (mut a Args) process_arg(arg string, val ?string) ! {
 		'create' {
 			a.create = true
 		}
-		'reset-admin' {
-			a.reset_admin = true
-		}
 		'port', 'p' {
 			a.port = val or { '' }.int()
 			if a.port <= 1024 {
 				return error('--port: PORT must be > 1024')
 			}
+		}
+		'reset-admin' {
+			a.reset_admin = true
 		}
 		'session-ttl' {
 			a.session_ttl = val or { '' }.int()
@@ -164,6 +164,14 @@ fn (mut a Args) load_conf() ! {
 				return error('[server.port] must be > 1024')
 			}
 			a.port = ival
+		}
+		if val := conf.value_opt('server.session-ttl') {
+			ival := val.int()
+			if ival < 10 {
+				return error('[server.session-ttl] must be > 15 (seconds)')
+			} else {
+				a.session_ttl = ival
+			}
 		}
 		if val := conf.value_opt('db.type') {
 			sval := val.string()
