@@ -5,7 +5,7 @@ export const Star = props => {
 		got,
 		unknown,
 	} = props;
-	
+
 	const star = unknown? "☆" : got? "★" : "✘";
 	const style = {
 		border: "1px red dashed",

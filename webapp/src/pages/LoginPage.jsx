@@ -1,7 +1,7 @@
 import { useState, useId, useRef, useContext } from 'react';
 import { Button, Modal, Label, TextInput, Checkbox, Tooltip, Spinner, Alert } from 'flowbite-react';
 import { Confirm } from '@/components/Confirm';
-import { AuthContext } from '@/providers/Auth';
+import { AuthContext } from '@/contexts/Auth';
 import { FiArrowRightCircle } from "react-icons/fi";
 import { HiInformationCircle } from 'react-icons/hi';
 
@@ -17,7 +17,7 @@ export function LoginPage() {
   const rememberId = useId();
   const initialRef = useRef();
   const [ confirm, setConfirm ] = useState( false );
-  const { loading, login, authError } = useContext( AuthContext );
+  const { loading, login, error } = useContext( AuthContext );
 
 
   function handleChange( e ) {
@@ -101,9 +101,9 @@ export function LoginPage() {
                 </Button>
               </div>
             </div>
-            { authError && (
+            { error && (
               <Alert size="lg" color="failure" icon={HiInformationCircle}>
-                { authError }
+                { error }
               </Alert>
             ) }
           </form>

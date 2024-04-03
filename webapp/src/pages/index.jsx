@@ -1,13 +1,16 @@
-import { AuthProvider } from '@/providers/Auth';
-import { QueryProvider } from '@/providers/Query';
+import { ApiProvider } from '@/contexts/Api';
+import { AuthProvider } from '@/contexts/Auth';
+import { QueryProvider } from '@/contexts/Query';
 import { App } from '@/pages/App';
 
 export default function Index() {
 	return (
-      <QueryProvider>
-	    <AuthProvider>
-          <App />
-	    </AuthProvider>
-      </QueryProvider>
+      <ApiProvider>
+        <QueryProvider>
+	      <AuthProvider>
+            <App />
+	      </AuthProvider>
+        </QueryProvider>
+      </ApiProvider>
 	);
 }
