@@ -16,7 +16,7 @@ build: $(STARSD)
 	docker build -f ci/Dockerfile -t stars .
 
 dev-starsd:
-	cd src && v -d trace_orm -d trace_requests -d trace_request_url -d vweb_livereload watch run cmd/starsd --db-file=test.db
+	cd src && v -d trace_orm -d trace_vweb -d vweb_livereload watch run cmd/starsd --db-file=test.db
 
 dev-starsd-reset:
 	rm -f src/test.db
