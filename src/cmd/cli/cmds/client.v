@@ -111,6 +111,9 @@ fn (mut c Client) fetch[T](uri string, method http.Method, data ?string) !T {
 			200 {
 				return json.decode(T, res.body)!
 			}
+			401 {
+				return error('bad username or password')
+			}
 			403 {
 				return error('not authorised')
 			}
