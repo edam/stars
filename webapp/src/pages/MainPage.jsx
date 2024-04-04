@@ -1,20 +1,17 @@
-import { Star } from "@/components/Star";
+import { Title } from "@/components/Title";
+import { Progress } from "@/components/Progress";
 import { StarRow } from "@/components/StarRow";
+import { WinRow } from "@/components/WinRow";
+import { Summary } from "@/components/Summary";
 
 export function MainPage() {
   return (
-	<>
-	  <div>
-		<h1>Daily-ARSE-Stars!</h1>
-		<h3> sorry he has toretts</h3>
-	  </div>
-	  <StarRow>
-		<Star got={ true } />
-		<Star got={ false } />
-		<Star unknown={ true } />
-		<Star unknown={ true } />
-		<Star unknown={ true } />
-	  </StarRow>
-	</>
+    <div className="flex flex-col max-w-screen-lg mx-auto">
+      <Title />
+      <Progress />
+      <StarRow last />
+      <WinRow />
+      <Summary />
+    </div>
   );
 }

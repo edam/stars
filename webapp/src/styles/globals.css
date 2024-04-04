@@ -12,3 +12,7 @@ body {
     text-wrap: balance;
   }
 }
+
+.dbg {
+  border: 1px black solid;
+}
