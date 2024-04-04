@@ -101,8 +101,8 @@ fn (mut a Args) process_arg(arg string, val ?string) ! {
 		}
 		'session-ttl' {
 			a.session_ttl = val or { '' }.int()
-			if a.session_ttl < 1 {
-				return error('--session-ttl: must be > 0')
+			if a.session_ttl < 15 {
+				return error('--session-ttl: must be >= 15')
 			}
 		}
 		//'db' {
@@ -160,15 +160,15 @@ fn (mut a Args) load_conf() ! {
 		conf := toml.parse_file(file) or { return error('error parsing ${file}\n${err}') }
 		if val := conf.value_opt('server.port') {
 			ival := val.int()
-			if ival > 1024 {
+			if ival <= 1024 {
 				return error('[server.port] must be > 1024')
 			}
 			a.port = ival
 		}
 		if val := conf.value_opt('server.session-ttl') {
 			ival := val.int()
-			if ival < 10 {
-				return error('[server.session-ttl] must be > 15 (seconds)')
+			if ival < 15 {
+				return error('[server.session-ttl] must be >= 15 (seconds)')
 			} else {
 				a.session_ttl = ival
 			}
