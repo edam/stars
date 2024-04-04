@@ -7,7 +7,7 @@ export const Ping = ( { interval, children } ) => {
   const { confirmLogin, confirmLogout, sessionTtl } = useContext( AuthContext );
 
 
-  const ping = useCallback( () => {
+  function ping() {
     api.get( 'ping' )
       .then( res => {
         confirmLogin();
@@ -17,15 +17,13 @@ export const Ping = ( { interval, children } ) => {
           confirmLogout();
         }
       } );
-  }, [ confirmLogin, confirmLogout ] );
+  }
 
   useEffect(() => {
     if( sessionTtl ) {
-      console.log(`MOUNT ${sessionTtl}`);
       ping();
-      const timer = setInterval( ping, ( sessionTtl + 1 ) * 1000 );
+      const timer = setInterval( ping, ( sessionTtl - 10 ) * 1000 );
       return () => {
-        console.log("UNMOUNT");
         clearInterval( timer );
       }
     }

@@ -1,7 +1,5 @@
-
-import { createContext, useState, useMemo, useContext, useCallback } from 'react';
+import { createContext, useState, useMemo, useContext, useReducer } from 'react';
 import { useQuery } from 'react-query';
-import { unstable_batchedUpdates } from 'react-dom';
 import { sha256 } from 'js-sha256';
 import { ApiContext } from '@/contexts/Api';
 
@@ -9,81 +7,94 @@ export const AuthContext = createContext({});
 
 const hostname = process.env.NEXT_PUBLIC_HOSTNAME;
 
+function stateReducer( state, action ) {
+  console.log(action);
+  switch( action.type ) {
+  case 'login':
+    if( !state.loading ) {
+      return {
+        loading: true,
+        loggedIn: false,
+        error: null,
+        sessionTtl: null,
+      };
+    }
+    break;
+  case 'session':
+    if( state.loading )
+      return { ...state, sessionTtl: action.sessionTtl };
+    break;
+  case 'confirm':
+    if( state.loading )
+      return { ...state, loading: false, loggedIn: true };
+    break;
+  case 'fail':
+    return {
+      loading: false,
+      loggedIn: false,
+      error: action.error || state.loggedIn?
+        'You have been logged out' : 'Bad username or password',
+      sessionTtl: null,
+    };
+  case 'logout':
+    if( state.loggedIn )
+      return { ...state, loggedIn: false, sessionTtl: null };
+    break;
+  }
+  return state;
+}
+
 export function AuthProvider( { children } ) {
-  const [ loading, setLoading ] = useState( false );
-  const [ loggedIn, setLoggedIn ] = useState( false );
   const [ credentials, setCredentials ] = useState( {} );
-  const [ error, setError ] = useState();
-  const [ sessionTtl, setSessionTtl ] = useState();
+  const [ state, stateDispatch ] = useReducer( stateReducer, {
+    loading: false,
+    loggedIn: false,
+    error: null,
+    sessionTtl: null,
+  } );
 
   const { api, setSessionId, apiVersion } = useContext( ApiContext );
 
-  const setLoggedInX = ( yes ) => {
-    console.log(`SET LOGGED IN ${yes}`);
-    setLoggedIn( yes );
-  };
-
   const psk = useMemo( () => {
-    return credentials.password? sha256( credentials.password ) : '';
-  }, [ credentials.password ] );
+    return credentials.password? sha256( credentials.password ) : null;
+  }, [ credentials ] );
 
   useQuery( {
     queryKey: [ 'auth', credentials.username, psk ],
-    enabled: !!credentials.username && !!psk && !error && !sessionTtl,
+    enabled: !!psk && state.loading && !state.sessionTtl,
     retry: false,
     gcTime: Infinity,
     queryFn: () => {
       return api.get( `auth/${credentials.username}` )
         .then( res => {
           const { session_ttl, api_version, challenge } = res.data;
-          if( api_version != apiVersion ) {
+          if( api_version != apiVersion )
             throw new Error( 'Server API version mismatch' );
-          }
-          unstable_batchedUpdates( () => {
-            setSessionId( sha256(`${psk}:${res.data.challenge}`) );
-            setSessionTtl( session_ttl );
-          } );
+          setSessionId( sha256(`${psk}:${res.data.challenge}`) );
+          stateDispatch( { type: 'session', sessionTtl: session_ttl } );
         } )
         .catch( err => {
-          completeLogin( `Error: ${err.message}` );
+          stateDispatch( { type: 'fail', error: `Error: ${err.message}` } );
         } );
     },
   } );
 
   function beginLogin( username, password ) {
-    setLoggedInX( false );
-    setLoading( true );
     setCredentials( { username, password } );
-    setError( null );
-    setSessionTtl( null );
+    stateDispatch( { type: 'login' } );
   }
 
-  function completeLogin( error ) {
-    console.log( `COMPLETE when LI-${loggedIn} E-${!!error}: ${error}` )
-    setError( error );
-    setLoggedInX( !error );
-    setLoading( false );
-    if( error ) setSessionTtl( null );
-  }
-
-  const confirmLogout = useCallback( ev => {
-    const message = loggedIn?
-          'You have been logged out' : 'Bad username or password';
-    if( !error ) completeLogin( message );
-  }, [ loggedIn, error ] )
-
-  const value = useMemo( () => {
-    return {
-      loading: loading,
-      loggedIn: loggedIn,
-      username: credentials.username,
-      error: error,
-      sessionTtl: sessionTtl,
-      login: beginLogin,
-      confirmLogin: () => completeLogin(),
-      confirmLogout: confirmLogout,
-    }
-  }, [ loading, loggedIn, credentials.username, error, sessionTtl ] );
+  const value = {
+    loading: state.loading,
+    loggedIn: state.loggedIn,
+    username: credentials.username,
+    error: state.error,
+    sessionTtl: state.sessionTtl,
+    login: beginLogin,
+    logout: () => stateDispatch( { type: 'logout' } ),
+    confirmLogin: () => stateDispatch( { type: 'confirm' } ),
+    confirmLogout: () => stateDispatch( { type: 'fail' } ),
+  };
 
   return (
     <AuthContext.Provider value={ value }>
