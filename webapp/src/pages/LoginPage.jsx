@@ -19,7 +19,6 @@ export function LoginPage() {
   const [ confirm, setConfirm ] = useState( false );
   const { loading, login, error } = useContext( AuthContext );
 
-
   function handleChange( e ) {
     const { name, value } = e.target;
     setForm( { ...form, [name]: value } );

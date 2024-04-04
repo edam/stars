@@ -3,7 +3,7 @@ import { useQuery } from 'react-query';
 import { sha256 } from 'js-sha256';
 import { ApiContext } from '@/contexts/Api';
 
-export const AuthContext = createContext({});
+export const AuthContext = createContext( {} );
 
 const hostname = process.env.NEXT_PUBLIC_HOSTNAME;
 
