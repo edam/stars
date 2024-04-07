@@ -6,12 +6,14 @@ import { Summary } from "@/components/Summary";
 
 export function MainPage() {
   return (
-    <div className="flex flex-col max-w-screen-lg mx-auto">
+    <>
       <Title />
-      <Progress />
-      <StarRow last />
-      <WinRow />
+      <div className="dbg flex flex-col max-w-screen-lg mx-auto">
+        <Progress />
+        <StarRow last />
+        <WinRow />
+      </div>
       <Summary />
-    </div>
+    </>
   );
 }

@@ -1,4 +1,4 @@
-import { createContext, useState, useMemo, useContext, useReducer } from 'react';
+import { createContext, useState, useEffect, useContext, useReducer } from 'react';
 import { useQuery } from 'react-query';
 import { sha256 } from 'js-sha256';
 import { ApiContext } from '@/contexts/Api';
@@ -15,8 +15,10 @@ function stateReducer( state, action ) {
       return {
         loading: true,
         loggedIn: false,
+        loggedOut: false,
         error: null,
         sessionTtl: null,
+        recalled: !!action.recalled,
       };
     }
     break;
@@ -29,16 +31,20 @@ function stateReducer( state, action ) {
       return { ...state, loading: false, loggedIn: true };
     break;
   case 'fail':
+    const error = action.error ||
+      ( !state.loggedIn? 'Bad username or password' : null );
+    if( error ) localStorage.removeItem( 'psk' );
     return {
       loading: false,
       loggedIn: false,
-      error: action.error || state.loggedIn?
-        'You have been logged out' : 'Bad username or password',
-      sessionTtl: null,
+      error: error,
+      loggedOut: !error,
     };
   case 'logout':
-    if( state.loggedIn )
-      return { ...state, loggedIn: false, sessionTtl: null };
+    if( state.loggedIn ) {
+      localStorage.removeItem( 'psk' );
+      return { ...state, loggedIn: false };
+    }
     break;
   }
   return state;
@@ -49,19 +55,32 @@ export function AuthProvider( { children } ) {
   const [ state, stateDispatch ] = useReducer( stateReducer, {
     loading: false,
     loggedIn: false,
+    loggedOut: false,
     error: null,
     sessionTtl: null,
+    recalled: false,
   } );
 
   const { api, setSessionId, apiVersion } = useContext( ApiContext );
 
-  const psk = useMemo( () => {
-    return credentials.password? sha256( credentials.password ) : null;
-  }, [ credentials ] );
+  useEffect( () => {
+    const username = localStorage.getItem( 'username' );
+    const psk = localStorage.getItem( 'psk' );
+    //console.log( `GOT ${username}:${psk}` );
+    if( username && !credentials.username && !credentials.psk &&
+        !state.loading && !state.loggedIn && !state.error ) {
+      setCredentials( creds => ( { username, psk: psk || creds.psk } ) );
+      if( psk ) stateDispatch( { type: 'login' } );
+    }
+    if( !!username && !!psk && state.loggedOut && !state.error ) {
+      setCredentials( creds => ( { username, psk: psk || creds.psk } ) );
+      if( psk ) stateDispatch( { type: 'login', recalled: true } );
+    }
+  }, [ credentials, state ] );
 
   useQuery( {
-    queryKey: [ 'auth', credentials.username, psk ],
-    enabled: !!psk && state.loading && !state.sessionTtl,
+    queryKey: [ 'auth', credentials ],
+    enabled: !!credentials.psk && state.loading && !state.sessionTtl,
     retry: false,
     gcTime: Infinity,
     queryFn: () => {
@@ -70,26 +89,34 @@ export function AuthProvider( { children } ) {
           const { session_ttl, api_version, challenge } = res.data;
           if( api_version != apiVersion )
             throw new Error( 'Server API version mismatch' );
-          setSessionId( sha256(`${psk}:${res.data.challenge}`) );
+          setSessionId( sha256(`${credentials.psk}:${res.data.challenge}`) );
           stateDispatch( { type: 'session', sessionTtl: session_ttl } );
         } )
         .catch( err => {
           stateDispatch( { type: 'fail', error: `Error: ${err.message}` } );
+          localStorage.removeItem( 'psk' );
         } );
     },
   } );
 
-  function beginLogin( username, password ) {
-    setCredentials( { username, password } );
-    stateDispatch( { type: 'login' } );
+  function beginLogin( username, password, rememberMe ) {
+    if( !!username && !!password ) {
+      const psk = sha256( password );
+      setCredentials( { username, psk } );
+      stateDispatch( { type: 'login' } );
+      localStorage.setItem( 'username', username );
+      if( rememberMe ) localStorage.setItem( 'psk', psk );
+    }
   }
 
   const value = {
+    username: credentials.username,
     loading: state.loading,
     loggedIn: state.loggedIn,
-    username: credentials.username,
+    loggedOut: state.loggedOut,
     error: state.error,
     sessionTtl: state.sessionTtl,
+    recalled: state.recalled,
     login: beginLogin,
     logout: () => stateDispatch( { type: 'logout' } ),
     confirmLogin: () => stateDispatch( { type: 'confirm' } ),

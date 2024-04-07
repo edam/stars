@@ -1,4 +1,4 @@
-import { useState, useId, useRef, useContext } from 'react';
+import { useState, useId, useRef, useContext, useEffect } from 'react';
 import { Button, Modal, Label, TextInput, Checkbox, Tooltip, Spinner, Alert } from 'flowbite-react';
 import { Confirm } from '@/components/Confirm';
 import { AuthContext } from '@/contexts/Auth';
@@ -6,18 +6,41 @@ import { FiArrowRightCircle } from "react-icons/fi";
 import { HiInformationCircle } from 'react-icons/hi';
 
 export function LoginPage() {
+  const [ errors, setErrors ] = useState( {} );
+  const usernameId = useId();
+  const passwordId = useId();
+  const rememberId = useId();
+  const usernameRef = useRef();
+  const passwordRef = useRef();
+  const [ confirm, setConfirm ] = useState( false );
+  const { loading, login, error, username: lastUsername, loggedOut, recalled } =
+        useContext( AuthContext );
   const [ form, setForm ] = useState( {
     username: '',
     password: '',
     remember: false,
   } );
-  const [ errors, setErrors ] = useState( {} );
-  const usernameId = useId();
-  const passwordId = useId();
-  const rememberId = useId();
-  const initialRef = useRef();
-  const [ confirm, setConfirm ] = useState( false );
-  const { loading, login, error } = useContext( AuthContext );
+
+  function focusPassword() {
+    // if( passwordRef.current )
+    //   passwordRef.current.focus();
+    // else
+    //   setTimeout( () => passwordRef.current.focus(), 0 );
+  }
+
+  useEffect( () => {
+    if( lastUsername ) {
+      setForm( form => ( { ...form, username: lastUsername || form.username } ) );
+      focusPassword();
+    }
+  }, [ lastUsername ] );
+
+  useEffect( () => {
+    if( error ) {
+      setForm( form => ( { ...form, password: '' } ) );
+      focusPassword();
+    }
+  }, [ error ] );
 
   function handleChange( e ) {
     const { name, value } = e.target;
@@ -55,9 +78,20 @@ export function LoginPage() {
     }
   }
 
+  if( loading && recalled ) {
+    return (
+      <Modal show size="md" popup>
+        <div className="flex items-center m-4">
+          <div className="grow">Reconnecting...</div>
+          <Spinner size="lg" className="mr-2" />
+        </div>
+      </Modal>
+    );
+  }
+
   return (
     <>
-      <Modal show size="md" initialFocus={ initialRef } popup>
+      <Modal show size="md" initialFocus={ usernameRef } popup>
         <Modal.Header>Sign In</Modal.Header>
         <Modal.Body>
           <form className="space-y-6">
@@ -66,7 +100,7 @@ export function LoginPage() {
                 <Label htmlFor={ usernameId } value="Username" />
               </div>
               <TextInput type="text" disabled={ loading }
-                         name="username" id={ usernameId } ref={ initialRef }
+                         name="username" id={ usernameId } ref={ usernameRef }
                          value={ form.username } onChange={ handleChange }
                          color={ errors.username? "failure" : "gray" }
                          helperText={ errors.username } />
@@ -76,7 +110,7 @@ export function LoginPage() {
                 <Label htmlFor={ passwordId } value="Password" />
               </div>
               <TextInput type="password" disabled={ loading }
-                         name="password" id={ passwordId }
+                         name="password" id={ passwordId } ref={ passwordRef }
                          value={ form.password } onChange={ handleChange }
                          color={ errors.password? "failure" : "gray" }
                          helperText={ errors.password } />
@@ -101,8 +135,13 @@ export function LoginPage() {
               </div>
             </div>
             { error && (
-              <Alert size="lg" color="failure" icon={HiInformationCircle}>
+              <Alert size="lg" color="failure" icon={ HiInformationCircle }>
                 { error }
+              </Alert>
+            ) }
+            { loggedOut && (
+              <Alert size="lg" color="warning" icon={ HiInformationCircle }>
+                You were logged out.
               </Alert>
             ) }
           </form>
@@ -111,7 +150,7 @@ export function LoginPage() {
       <Confirm show={ confirm } title="Is this a private computer?"
                onOk={ e => setConfirm( false ) }
                onCancel={ handleCancelConfirm }>
-        <p>Enabling "remember me" on a shared computer will give other people
+        <p>Enabling "remember me" on a shared computer will give anyone using it
         access to your account.</p>
         <p>Are you sure you want to remember your login?</p>
       </Confirm>

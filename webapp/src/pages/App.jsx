@@ -5,11 +5,12 @@ import { MainPage } from './MainPage';
 import { Ping } from  '@/components/Ping';
 
 export function App() {
-  const { loggedIn, sessionTtl } = useContext( AuthContext );
+  const { loggedIn, loading, sessionTtl } = useContext( AuthContext );
 
+  const ping = loggedIn || ( loading && sessionTtl );
   return (
     <div>
-      { sessionTtl && <Ping internval={ sessionTtl } /> }
+      { ping && <Ping internval={ sessionTtl } /> }
       {
         loggedIn? (
           <MainPage />
