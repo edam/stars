@@ -2,17 +2,24 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: 'Quicksand';
+  font-weight: 500;
+  src: local( 'Quicksand' ), url( ../fonts/Quicksand.ttf) format( 'truetype' );
+}
+
 body {
-  @apply text-stone-800 dark:text-stone-100;
-  @apply bg-stone-200 dark:bg-stone-900;
+	@apply text-stone-800 dark:text-stone-100;
+	/*@apply bg-stone-200 dark:bg-stone-950;*/
+	font-family: Quicksand;
 }
 
 @layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
+	.text-balance {
+		text-wrap: balance;
+	}
 }
 
 .dbg {
-  border: 1px black solid;
+	border: 1px black solid;
 }
